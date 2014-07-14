@@ -1,14 +1,20 @@
 package com.aleozlx.pacswitch.test;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.*;
+import java.io.IOException;
 import java.util.*;
 
 import javax.swing.*;
+
 import com.aleozlx.pacswitch.*;
 
 public class CommWindow extends ModernFrame implements IMessageHandler {
-	private static final long serialVersionUID = -5725770541408790450L;
-	private final GatewayMessager pm;
+	private static final long serialVersionUID = 1L;
+	private final Messager pm;
 	private final Storage storage;
 	private String target="";
 	private JMenu mnFriend,mnSend,mnWindow; 
@@ -19,7 +25,7 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 	private JButton btnOK;
 	private Map<String,JMenuItem> friendsmap;
 	
-	public CommWindow(GatewayMessager messager){
+	public CommWindow(Messager messager){
 		this.pm=messager;
 		this.storage=new Storage(pm.getUserID());
 		this.loadFriends();
@@ -66,6 +72,12 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 		menuItem(mnSend,miSendClipboard,miSendTextView);
 		menuItem(mnWindow,miViewNew,miViewExit);
 		menu(mnFriend,mnSend,mnWindow);
+		miSendTextView.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e) {
+				sendTextView();}});
+		miSendClipboard.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e) {
+				sendClipboard();}});
 		miViewNew.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent e) {
 				onNewWindow();}});
@@ -78,7 +90,7 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 		btnOK.addActionListener(alSend);
 		txtInput.addActionListener(alSend);
 	}
-	
+
 	protected void setTarget(String name){
 		if(name!=null&&!name.equals("")){
 			setTitle("To "+name);
@@ -159,9 +171,22 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 						if(!pm.send(target, msg).equals("ACK"))
 							print("system","No response");
 					} 
-					catch (PacswitchException e) { print("system",target+" offline."); }
+					catch (PacswitchException e) { 
+						e.printStackTrace();
+						print("system",target+" offline."); 
+					}
 				}
 			}.start();
+		}
+	}
+	private void sendTextView(){
+		TextViewWindow tvw=new TextViewWindow(pm,target,Messager.generateID());
+		tvw.setVisible(true);
+	}
+	private void sendClipboard() {
+		String str=getStringFromClipboard();
+		if(str!=null){
+			pm.send(target, "clipboard", "copy", str);
 		}
 	}
 	private void onNewWindow() {
@@ -177,15 +202,27 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 	}
 	private void confirmExit(){
 		if (JOptionPane.showConfirmDialog(this,
-				"Are you sure to exit this app?", 
-				"Exit", 
-				JOptionPane.YES_NO_OPTION,
-				JOptionPane.QUESTION_MESSAGE) 
-				== JOptionPane.YES_OPTION)
-			onExit();
+			"Are you sure to exit this app?", 
+			"Exit", 
+			JOptionPane.YES_NO_OPTION,
+			JOptionPane.QUESTION_MESSAGE) 
+			== JOptionPane.YES_OPTION)
+		onExit();
 	}
 	private void onExit(){
 		pm.close();
 		System.exit(0);
+	}
+	private static String getStringFromClipboard() {
+		Transferable transferable = Toolkit.getDefaultToolkit().getSystemClipboard().getContents(null);
+		try {
+			if (transferable != null && transferable.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+				String text = (String) transferable.getTransferData(DataFlavor.stringFlavor);
+				return text;
+			}
+		} 
+		catch (UnsupportedFlavorException e) { } 
+		catch (IOException e) { }
+		return null;
 	}
 }

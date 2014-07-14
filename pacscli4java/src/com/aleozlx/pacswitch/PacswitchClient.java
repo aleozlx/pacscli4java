@@ -9,22 +9,7 @@ import java.net.*;
  * @version 1.2.2
  * @since June 3, 2014
  */
-public abstract class PacswitchClient {
-	/**
-	 * Literal new line
-	 */
-	public static final byte[] NEWLINE={10};
-
-	/**
-	 * Sender separator
-	 */
-	public static final byte[] SENDER_SEP={62,32};
-	
-	/**
-	 * Encoding
-	 */
-	public static final String ASCII="ascii";
-	
+public abstract class PacswitchClient extends PacswitchAbstractClient {
 	/**
 	 * Port
 	 */
@@ -69,6 +54,8 @@ public abstract class PacswitchClient {
 	 * Socket object
 	 */
 	Socket socket;
+	
+	Socket getSocket(){ return socket; }
 
 	/**
 	 * Initiate a connection.
@@ -86,7 +73,7 @@ public abstract class PacswitchClient {
 			this.password=password;
 			this.host=host;
 			this.clienttype=clienttype;
-			PacswitchProtocol.AUTH(socket,user,password,clienttype);
+			PacswitchProtocol.AUTH(this,user,password,clienttype);
 		}
 		catch(IOException e){ return false; }
 		return true;
@@ -101,7 +88,7 @@ public abstract class PacswitchClient {
 			this.closeSocket();
 			try{ 
 				socket=new Socket(host,port);
-				PacswitchProtocol.AUTH(socket,user,password,clienttype);
+				PacswitchProtocol.AUTH(this,user,password,clienttype);
 				return true;
 			}
 			catch(IOException e){ Synchronizer.wait(800); }
@@ -117,7 +104,7 @@ public abstract class PacswitchClient {
 	 */
 	public final boolean pacSendData(String recv,byte[] ... buffer) {
 		for(int tries=0;tries<3;tries++){
-			try{ PacswitchProtocol.data(socket,recv,buffer); return true; }
+			try{ PacswitchProtocol.data(this,recv,buffer); return true; }
 			catch(IOException e){ Synchronizer.wait(2000); }
 		}
 		return false;
@@ -132,13 +119,13 @@ public abstract class PacswitchClient {
 		this.loopStarted=true;
 		do{
 			while(mybuffer.size!=0
-				&&(iI=mybuffer.find(PacswitchProtocol.PACKAGE_START))!=-1
-				&&(iII=mybuffer.find(PacswitchProtocol.PACKAGE_END))!=-1
+				&&(iI=mybuffer.find(PACKAGE_START))!=-1
+				&&(iII=mybuffer.find(PACKAGE_END))!=-1
 			){
-				iIII=mybuffer.find(SENDER_SEP,iI+PacswitchProtocol.PACKAGE_START.length);
+				iIII=mybuffer.find(SENDER_SEP,iI+PACKAGE_START.length);
 				String sender=new String(mybuffer.buffer,
-						iI+PacswitchProtocol.PACKAGE_START.length,
-						iIII-(iI+PacswitchProtocol.PACKAGE_START.length));
+						iI+PACKAGE_START.length,
+						iIII-(iI+PACKAGE_START.length));
 				byte[] data=new byte[iII-(iIII+SENDER_SEP.length)];
 				System.arraycopy(mybuffer.buffer,iIII+SENDER_SEP.length,data,0,data.length);
 				if(sender.equals("pacswitch")){
@@ -150,7 +137,7 @@ public abstract class PacswitchClient {
 					catch(UnsupportedEncodingException ee){ }
 				}
 				else onDataReceived(sender,data); 
-				iII+=PacswitchProtocol.PACKAGE_END.length;
+				iII+=PACKAGE_END.length;
 				System.arraycopy(mybuffer.buffer,iII,mybuffer.buffer,0,mybuffer.size-=iII);
 			}
 			try{
@@ -240,4 +227,55 @@ public abstract class PacswitchClient {
 	 */
 	@Deprecated
 	public void pacEnd(){ throw new Error("Not implemented"); }
+	
+	static class PacswitchProtocol {
+	
+		public static final void AUTH(PacswitchAbstractClient cli,String username,String password,String clienttype) throws IOException{	
+			call(cli,"AUTH",username,password,clienttype);
+		}
+
+		@Deprecated
+		public static final void STREAM(PacswitchAbstractClient cli,String id) throws IOException{
+			call(cli,"STREAM",id);
+		}
+		
+		/**
+		 * Call a protocol method.
+		 * @param cli Client
+		 * @param ss Protocol method and arguments
+		 * @throws IOException
+		 */
+		public static final void call(PacswitchAbstractClient cli,String ... ss) throws IOException{
+			Socket s=cli.getSocket();
+			synchronized(s){
+				OutputStream out=s.getOutputStream();
+				out.write(PACKAGE_START);
+				out.write(PACKAGE_TEXT);
+				for(String str:ss){
+					out.write(str.getBytes("ascii"));
+					out.write(32);
+				}
+				out.write(PACKAGE_END);
+			}
+		}
+		
+		/**
+		 * Send a data packet.
+		 * @param cli Client
+		 * @param recv Receiver ID
+		 * @param buffer Data to be sent
+		 * @throws IOException
+		 */
+		public static final void data(PacswitchAbstractClient cli,String recv,byte[] ... buffer) throws IOException {
+			Socket s=cli.getSocket();
+			synchronized(s){
+				OutputStream os=s.getOutputStream(); 
+				os.write(PACKAGE_START);
+				os.write(recv.getBytes("ascii"));
+				os.write(10);
+				for(byte[] data:buffer)os.write(data);
+				os.write(PACKAGE_END);
+			}
+		}
+	}
 }

@@ -101,14 +101,20 @@ class FutureTracker<E> extends HashMap<String,FutureObject<E>>{
 	
 	protected final String genID(){
 		String id=null;
-		do{
-			Random r=new Random();
-			char[] ridbuffer=new char[IDLEN];
-			for(int i=0;i<IDLEN;i++)ridbuffer[i]=IDRANGE[r.nextInt(IDRANGE.length)];
-			id=new String(ridbuffer);
-		}while(containsKey(id));
+		do{ id = generateID(IDLEN,IDRANGE); }
+		while(containsKey(id));
 		return id;
 	}
+
+	public static final String generateID(int len,char[] range) {
+		String id;
+		Random r=new Random();
+		char[] ridbuffer=new char[len];
+		for(int i=0;i<len;i++)ridbuffer[i]=range[r.nextInt(range.length)];
+		id=new String(ridbuffer);
+		return id;
+	}
+	
 }
 
 /**
@@ -175,25 +181,4 @@ class Mybuffer{
 	 * @return The position of specific sequence or -1 if not found.
 	 */
 	public final int find(byte[] s2){ return find(s2,0); }	
-}
-
-enum MessageType{
-	Request(20),Response(0),StreamReq(30),StreamRes(31),
-	Ping(32),ClipTrans(33),TextView(-30),Unknown;
-	private byte code;
-	private MessageType(){ code=-1; }
-	private MessageType(int code){ this.code=(byte)code; }
-	public final byte getByte(){ return code; }
-	public final byte[] getData(){ return new byte[]{code}; }
-	public final boolean isTracked(){ return code>0; }
-	public final boolean isResponse(){ return code==0; }
-	public final static MessageType fromByte(byte code){
-		switch(code){
-			case 20: return Request; case 0: return Response;
-			case 30: return StreamReq; case 31: return StreamRes;
-			case 32: return Ping; case 33: return ClipTrans;
-			case -30: return TextView;
-			default: return Unknown;
-		}
-	}
 }

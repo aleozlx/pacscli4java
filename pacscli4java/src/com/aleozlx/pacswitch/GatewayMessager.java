@@ -4,29 +4,39 @@ import java.util.*;
 
 public abstract class GatewayMessager extends PacswitchMessager {
 	public List<IMessageHandler> handlers=new LinkedList<IMessageHandler>();
-	public MessageInbox inbox=new MessageInbox(handlers);
+	public MessageInbox inbox=new MessageInbox();
 	public String ACK="ACK";
 	public String NAK="NAK";
+	public boolean ENAllowTracked=true;
+	public boolean ENAllowUntracked=true;
+	public boolean ENFilterTracked=false;
+	public boolean ENFilterUnTracked=false;
 	
 	@Override
 	protected String handleMessage(String from, String message) {
-		String res=this.dispatch(from, message);
-		if(res==null){
-			if(filter(from,message)){ 
+		if(!ENAllowTracked)return NAK;
+		else if(!ENFilterTracked||filter(from,message)){ 
+			String res=this.dispatch(from, message);
+			if(res==null){
 				inbox.pend(from,message); 
 				notifyPendingCounts();
 				onMessageAllowed(from,message);
 				return ACK; 
 			}
-			else{
-				onMessageBlocked(from,message);
-				return NAK;
+			else{ 
+				onMessageAllowed(from,message);
+				return res;
 			}
 		}
 		else{
-			onMessageAllowed(from,message);
-			return res;
+			onMessageBlocked(from,message);
+			return NAK;
 		}
+	}
+	
+	@Override
+	protected void handleUntrackedMessage(String from,String id, String message){
+		if(ENAllowUntracked&&(!ENFilterUnTracked||filter(from,message)))dispatchUntracked(from,id,message);
 	}
 	
 	public void notifyPendingCounts(){
@@ -46,11 +56,25 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	
 	protected String dispatch(String from, String message){
 		String res=null;
-		if(handlers!=null)for(IMessageHandler i:handlers){
+		for(IMessageHandler i:handlers){
 			String s=i.handleMessage(from, message);
 			if(res==null)res=s;
 		}
 		return res;
+	}
+	
+	public UntrackedMessagerHandlerMapping untrackedHandlers=new UntrackedMessagerHandlerMapping(){
+		private static final long serialVersionUID = 1L;
+		@Override
+		protected void miss(String id) { onUntrackedMessageHandlerMissing(id); }	
+	};
+	
+	protected void dispatchUntracked(final String from,final String id,final String message){
+		untrackedHandlers.hint(id);
+		new Thread(){
+			@Override
+			public void run(){
+				untrackedHandlers.handleMessage(from, id, message);}}.start();
 	}
 	
 	@Override
@@ -62,4 +86,5 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	protected abstract void onMessageSending(String to,String message);
 	protected abstract void onMessageBlocked(String from,String message);
 	protected abstract void onMessageAllowed(String from,String message);
+	protected abstract void onUntrackedMessageHandlerMissing(String id);
 }

@@ -3,12 +3,7 @@ import java.util.*;
 
 public class MessageInbox extends HashMap<String,LinkedList<PendingMessage>> {
 	private static final long serialVersionUID = 1L;
-	protected final List<IMessageHandler> handlers;
-	
-	public MessageInbox(List<IMessageHandler> handlers){
-		this.handlers=handlers;
-	}
-	
+
 	protected void pend(String from, String message){
 		if(!containsKey(from))this.put(from, new LinkedList<PendingMessage>());
 		LinkedList<PendingMessage> list=get(from);
