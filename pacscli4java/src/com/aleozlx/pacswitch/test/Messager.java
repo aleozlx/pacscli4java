@@ -39,12 +39,20 @@ public class Messager extends GatewayMessager{
 	}
 	
 	@Override
-	protected void onUntrackedMessageHandlerMissing(String id){
+	protected void onUntrackedMessageHandlerMissing(String from,String id,String message){
 		TextViewWindow tvw=new TextViewWindow(this,id);
 		untrackedHandlers.add(id, tvw);
 		tvw.setVisible(true);
 	}
 	
+	/**
+	 * Specifies the untracked message (with a target ID) protocol
+	 * @param to Receiver ID
+	 * @param id Target ID
+	 * @param type Custom message type (supposed to correspond to different handlers)
+	 * @param func Functionality (to perform different actions)
+	 * @param msg Message content
+	 */
 	public void send(String to,String id,String type,String func,String msg){
 		try { 
 			sendUntracked(
@@ -55,6 +63,13 @@ public class Messager extends GatewayMessager{
 		catch (UnsupportedEncodingException e) { }
 	}
 	
+	/**
+	 * Specifies the untracked message protocol
+	 * @param to Receiver ID
+	 * @param type Custom message type (supposed to correspond to different handlers)
+	 * @param func Functionality (to perform different actions)
+	 * @param msg Message content
+	 */
 	public void send(String to,String type,String func,String msg){
 		sendUntracked(
 			MessageType.Signal, to, 

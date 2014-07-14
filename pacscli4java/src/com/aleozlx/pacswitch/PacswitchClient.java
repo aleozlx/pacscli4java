@@ -4,9 +4,9 @@ import java.io.*;
 import java.net.*;
 
 /**
- * Pacswitch client
+ * Pacswitch client implementation
  * @author Alex
- * @version 1.2.2
+ * @version 1.3.1
  * @since June 3, 2014
  */
 public abstract class PacswitchClient extends PacswitchAbstractClient {
@@ -55,16 +55,10 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 	 */
 	Socket socket;
 	
+	@Override
 	Socket getSocket(){ return socket; }
 
-	/**
-	 * Initiate a connection.
-	 * @param user User ID
-	 * @param password Password
-	 * @param host Host IP Address
-	 * @param clienttype A unique string that distinguishes different kind of clients
-	 * @return Whether a connection is sucessfully made.
-	 */
+	@Override
 	public final boolean pacInit(String user,String password,String host,String clienttype){
 		try{
 			this.closeSocket();
@@ -96,12 +90,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		return false;
 	} 
 
-	/**
-	 * Send user data, which will be automatically wrapped in a packet.
-	 * @param buffer User data
-	 * @param recv Receiver ID
-	 * @return Whether the packet is successfully sent after, if necessary, multiple retries.
-	 */
+	@Override
 	public final boolean pacSendData(String recv,byte[] ... buffer) {
 		for(int tries=0;tries<3;tries++){
 			try{ PacswitchProtocol.data(this,recv,buffer); return true; }
@@ -110,10 +99,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		return false;
 	}
 
-	/**
-	 * Start the event loop for response data.
-	 * @throws InterruptedException
-	 */
+	@Override
 	public final void pacLoop() throws InterruptedException{
 		byte[] _mybuffer=new byte[2048]; int sz_mybuffer,iI,iII,iIII;
 		this.loopStarted=true;
@@ -202,38 +188,52 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		catch(Exception e){ }
 	}
 
-	/**
-	 * Close the connection permanently.
-	 */
-	@Deprecated
+	@Override @Deprecated
 	public void pacClose(){ this.close(); }
 
 	/**
-	 * Get the file discriptor of the socket
-	 * @return The file discriptor of the socket
+	 * Get the file descriptor of the socket
+	 * This is not actually implemented since it's considered unnecessary.
 	 */
-	@Deprecated
+	@Override @Deprecated
 	public int pacSocketno(){ throw new Error("Not implemented"); }
 
 	/**
-	 * Send a package start sequence
-	 * @param recv Receiver ID
+	 * Send a package start sequence.
+	 * This is not actually implemented since it's both inefficient and unnecessary.
 	 */
-	@Deprecated
+	@Override @Deprecated
 	public void pacStart(String recv){ throw new Error("Not implemented"); }
 
 	/**
-	 * Send a package end sequence
+	 * Send a package end sequence.
+	 * This is not actually implemented since it's both inefficient and unnecessary.
 	 */
-	@Deprecated
+	@Override @Deprecated
 	public void pacEnd(){ throw new Error("Not implemented"); }
 	
+	/**
+	 * Pacswitch protocol implementation
+	 */
 	static class PacswitchProtocol {
-	
+		/**
+		 * Request for authentication
+		 * @param cli Abstract client
+		 * @param username User ID
+		 * @param password Password
+		 * @param clienttype A unique string that distinguishes different kind of clients
+		 * @throws IOException
+		 */
 		public static final void AUTH(PacswitchAbstractClient cli,String username,String password,String clienttype) throws IOException{	
 			call(cli,"AUTH",username,password,clienttype);
 		}
 
+		/**
+		 * Request for a separate stream
+		 * @param cli Abstract client
+		 * @param id 
+		 * @throws IOException
+		 */
 		@Deprecated
 		public static final void STREAM(PacswitchAbstractClient cli,String id) throws IOException{
 			call(cli,"STREAM",id);
@@ -243,7 +243,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * Call a protocol method.
 		 * @param cli Client
 		 * @param ss Protocol method and arguments
-		 * @throws IOException
+		 * @throws IOException When data cannot be sent due to network issues
 		 */
 		public static final void call(PacswitchAbstractClient cli,String ... ss) throws IOException{
 			Socket s=cli.getSocket();
@@ -264,7 +264,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * @param cli Client
 		 * @param recv Receiver ID
 		 * @param buffer Data to be sent
-		 * @throws IOException
+		 * @throws IOException When data cannot be sent due to network issues
 		 */
 		public static final void data(PacswitchAbstractClient cli,String recv,byte[] ... buffer) throws IOException {
 			Socket s=cli.getSocket();

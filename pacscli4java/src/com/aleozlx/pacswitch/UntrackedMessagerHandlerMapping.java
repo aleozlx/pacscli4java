@@ -4,17 +4,17 @@ public abstract class UntrackedMessagerHandlerMapping extends HashMap<String,Lin
 	private static final long serialVersionUID = 1L;
 
 	public void handleMessage(String from,String id, String message){
-		if(!containsKey(id))miss(id);
+		if(!containsKey(id))miss(from,id,message);
 		if(containsKey(id))
 			for(IUntrackedMessageHandler i:get(id))
 				i.handleMessage(from, message);
 	}
 	
-	public void hint(String id){
-		if(!containsKey(id))miss(id);
+	public void hint(String from, String id, String message){
+		if(!containsKey(id))miss(from,id,message);
 	}
 	
-	protected abstract void miss(String id);
+	protected abstract void miss(String from,String id,String message);
 	
 	public void add(String id,IUntrackedMessageHandler h){
 		if(!containsKey(id))put(id,new LinkedList<IUntrackedMessageHandler>());

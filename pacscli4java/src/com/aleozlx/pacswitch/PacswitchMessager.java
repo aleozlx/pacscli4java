@@ -4,9 +4,11 @@ import java.util.*;
 import java.io.*;
 
 /**
- * PacswitchMessager
+ * Message protocol based on paswitch protocol
+ * Facilitates both tracked and untracked messages
+ * transmission and provide request-response mapping.
  * @author Alex
- * @version 1.2.2
+ * @version 1.3.1
  * @since June 27, 2014
  */
 public abstract class PacswitchMessager extends PacswitchClient {
@@ -14,9 +16,21 @@ public abstract class PacswitchMessager extends PacswitchClient {
 //
 //	protected static final String STREAM_DENIED="";
 	
+	/**
+	 * FutureObject tracker with ID format specifications
+	 * @param <E> Element type being mapped from a String.
+	 */
 	protected static final class Tracker<E> extends FutureTracker<E>{
 		private static final long serialVersionUID = 1L;
+		
+		/**
+		 * ID Range
+		 */
 		public static final char[] RIDRANGE="0123456789abcdefghjkmnpqrstuvwxyz".toCharArray();
+		
+		/**
+		 * Constructor
+		 */
 		public Tracker() { super(MessageProtocol.RIDLEN,RIDRANGE); }	
 	}
 
@@ -37,6 +51,9 @@ public abstract class PacswitchMessager extends PacswitchClient {
 //	 */
 //	protected FutureTracker<PacswitchSocket> socktracker=new Tracker<PacswitchSocket>();
 
+	/**
+	 * Device name
+	 */
 	protected String device;
 
 	/**
@@ -62,13 +79,28 @@ public abstract class PacswitchMessager extends PacswitchClient {
 
 	public final String getDeviceName(){ return this.device; }
 	public final String getUserID(){ return this.user; }
+	
+	/**
+	 * Affirmative response message sequence
+	 */
 	public static final byte[] AFFIRMATIVE=new byte[]{10,15};
 	
+	/**
+	 * Give a response
+	 * @param to Receiver ID
+	 * @param buffer Request buffer
+	 * @param response Response message
+	 */
 	protected final void respond(String to,byte[] buffer,String response){
 		try{ _sendResponse(to,buffer,response.getBytes(MessageProtocol.ENC)); }
 		catch(UnsupportedEncodingException e){ }
 	}
 	
+	/**
+	 * Give an affirmative message
+	 * @param to Receiver ID
+	 * @param buffer Request buffer
+	 */
 	protected final void affirm(String to,byte[] buffer){
 		_sendResponse(to,buffer,AFFIRMATIVE);
 	}
@@ -163,11 +195,12 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	}
 
 	/**
-	 * Send a message.
+	 * Send a tracked message synchronously
 	 * @param to Receiver ID
 	 * @param message Message content
 	 * @return Response from other side
-	 * @throws PacswitchException
+	 * @throws PacswitchException When there is an connection error, server down or receiver absence.
+	 * Refers to the exception message for a specified reason.
 	 */
 	public String send(String to, String message) throws PacswitchException{
 		FutureObject<String> mr=null;
@@ -199,11 +232,26 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		MessageProtocol.send(this,MessageType.Response,to,response,Arrays.copyOfRange(buffer,1,MessageProtocol.RIDLEN+1));
 	}
 	
+	/**
+	 * Send an untracked message without an ID.
+	 * @param msgtype Message type
+	 * @param to Receiver ID
+	 * @param message
+	 * @return Whether message was sent successfully
+	 */
 	protected final boolean sendUntracked(MessageType msgtype,String to, String message){
 		try { return MessageProtocol.send(this,msgtype,to,message.getBytes(MessageProtocol.ENC),MessageProtocol.SANSID); } 
 		catch (UnsupportedEncodingException e1) { return false; }
 	}
 	
+	/**
+	 * Send an untracked message without a target ID.
+	 * @param msgtype Message type
+	 * @param to Receiver ID
+	 * @param message 
+	 * @param id Target ID. This is for message dispatching at the other side
+	 * @return Whether message was sent successfully
+	 */
 	protected final boolean sendUntracked(MessageType msgtype,String to, String message,byte[] id){
 		try { return MessageProtocol.send(this,msgtype,to,message.getBytes(MessageProtocol.ENC),id); } 
 		catch (UnsupportedEncodingException e1) { return false; }
@@ -227,13 +275,33 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	 * @return Response to the message
 	 */
 	protected abstract String handleMessage(String from, String message);
+	
+	/**
+	 * Handle an untracked message with an ID.
+	 * @param from Sender ID
+	 * @param id Target ID
+	 * @param message
+	 */
 	protected abstract void handleUntrackedMessage(String from,String id, String message);
+	
+	/**
+	 * Handle an untracked message without an ID
+	 * @param from Sender ID
+	 * @param message
+	 */
 	protected abstract void handleUntrackedMessage(String from, String message);
 	
+	/**
+	 * Get a standard ID
+	 * @return A standard ID
+	 */
 	public static final String generateID(){
 		return FutureTracker.generateID(MessageProtocol.RIDLEN, Tracker.RIDRANGE);
 	}
 	
+	/**
+	 * Message protocol implementation
+	 */
 	static class MessageProtocol extends PacswitchProtocol {
 		/**
 		 * Message encoding
@@ -244,6 +312,12 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		 * Request ID length
 		 */
 		public static final int RIDLEN=20;
+		
+		/**
+		 * An ID, which dosen't exist because this cannot
+		 * be decoded with ASCII encoding, acts as a place 
+		 * holder for those untracked messages without target ID.
+		 */
 		public static final byte[] SANSID={
 			-1, -1, -1, -1, -1,
 			-1, -1, -1, -1, -1,
@@ -253,6 +327,15 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		
 		static{ assert SANSID.length==RIDLEN; }
 		
+		/**
+		 * Send method for message protocol
+		 * @param cli Abstract client
+		 * @param msgtype Message type
+		 * @param to Receiver ID
+		 * @param message Message content
+		 * @param rId Request ID or target ID(for some untracked messages)
+		 * @return Whether sent successfully
+		 */
 		public static final boolean send(
 			PacswitchMessager cli,
 			MessageType msgtype, String to,
