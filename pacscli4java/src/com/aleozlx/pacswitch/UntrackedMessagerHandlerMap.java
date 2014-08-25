@@ -1,6 +1,6 @@
 package com.aleozlx.pacswitch;
 import java.util.*;
-public abstract class UntrackedMessagerHandlerMapping extends HashMap<String,LinkedList<IUntrackedMessageHandler>> {
+public abstract class UntrackedMessagerHandlerMap extends HashMap<String,LinkedList<IUntrackedMessageHandler>> {
 	private static final long serialVersionUID = 1L;
 
 	public void handleMessage(String from,String id, String message){

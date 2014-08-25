@@ -36,7 +36,7 @@ public abstract class LoginWindow extends ModernFrame {
 	private void onBtnOKClicked(){
 		if(!check(txtUser.getText(),new String(txtPasswd.getPassword())))
 			JOptionPane.showMessageDialog(this, "Wrong ID or password");
-		else setVisible(false);
+		else dispose();
 	}
 	protected abstract boolean check(String userid,String password);
 }	

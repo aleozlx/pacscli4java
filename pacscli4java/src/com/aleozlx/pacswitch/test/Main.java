@@ -1,14 +1,14 @@
 package com.aleozlx.pacswitch.test;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.text.*;
 
 public class Main {	
 	public static void main(String[] args) {
 		final Messager pm=new Messager();
-		
-		@SuppressWarnings("serial")
-		LoginWindow lw=new LoginWindow(){
+	
+		new LoginWindow(){
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			protected boolean check(String userid,String password){
 				if(pm.connect(userid, password)&&pm.isAuthenticated()){
@@ -19,11 +19,9 @@ public class Main {
 				}
 				else return false; 
 			}
-		};
-		lw.setVisible(true);
-
+		}.setVisible(true); 
 	}
-	
+
 	public static final DateFormat getDateFormat(){
 		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		return format;

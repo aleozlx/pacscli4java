@@ -60,7 +60,6 @@ public class TextViewWindow extends ModernFrame implements IUntrackedMessageHand
 	
 	private void close(boolean incoming){
 		if(incoming)pm.untrackedHandlers.remove(id, this);
-		this.setVisible(false);
 		this.dispose();
 	}
 	
@@ -77,10 +76,18 @@ public class TextViewWindow extends ModernFrame implements IUntrackedMessageHand
 	}
 
 	@Override
-	public void handleMessage(String from, String message) {
-		int ii=message.indexOf("+");
-		String header=message.substring(0, ii);
-		String[] args=header.split(" ");
+	public void handleMessage(final String from, final String message) {
+		final int ii=message.indexOf("+");
+		final String header=message.substring(0, ii);
+		final String[] args=header.split(" ");
+		SwingUtilities.invokeLater(new Runnable(){
+			@Override
+		    public void run() { update(message, ii, args); }
+		});
+	}
+
+
+	private void update(String message, int ii, String[] args) {
 		if(args.length==2&&args[0].equals(TVTYPE)){
 			String content=message.substring(ii+1);
 			if(args[1].equals("t"))

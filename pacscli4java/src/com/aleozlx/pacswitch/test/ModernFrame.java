@@ -1,19 +1,34 @@
 package com.aleozlx.pacswitch.test;
 
 import javax.swing.*;
-
-import java.awt.Component;
-import java.awt.Dimension;
+import java.awt.*;
+import java.awt.event.*;
 
 public abstract class ModernFrame extends JFrame {
 	private static final long serialVersionUID = -9001603519181428664L;
 	public JPanel panContent=new JPanel();
 	public SpringLayout layout=new SpringLayout();
-	public ModernFrame(){
+	
+	static{
 		try{ UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); }
 		catch(Exception e){ }
+	}
+	
+	public ModernFrame(){
 		panContent.setLayout(layout);
+		JButton sos = new JButton("SOS");
+		this.add(sos); 
 		this.add(panContent);
+		
+		sos.registerKeyboardAction(new ActionListener(){
+			public void actionPerformed(ActionEvent arg0) {
+				System.err.println("SOS call from `"+getTitle()+"`");
+				
+			}	
+		}, 
+		KeyStroke.getKeyStroke(KeyEvent.VK_F5, InputEvent.CTRL_DOWN_MASK), 
+		JComponent.WHEN_IN_FOCUSED_WINDOW);
+		
 		initializeComponents();
 	}
 	

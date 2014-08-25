@@ -2,7 +2,10 @@ package com.aleozlx.pacswitch.test;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Date;
+
+import javax.swing.SwingUtilities;
 
 import com.aleozlx.pacswitch.GatewayMessager;
 import com.aleozlx.pacswitch.MessageType;
@@ -39,7 +42,16 @@ public class Messager extends GatewayMessager{
 	}
 	
 	@Override
-	protected void onUntrackedMessageHandlerMissing(String from,String id,String message){
+	protected void onUntrackedMessageHandlerMissing(final String from,final String id,final String message){
+		try {
+			SwingUtilities.invokeAndWait(new Runnable() {
+				@Override
+			    public void run() { newTextViewWindow(id); }
+			});
+		} catch (InvocationTargetException | InterruptedException e) { }
+	}
+	
+	private void newTextViewWindow(final String id){
 		TextViewWindow tvw=new TextViewWindow(this,id);
 		untrackedHandlers.add(id, tvw);
 		tvw.setVisible(true);

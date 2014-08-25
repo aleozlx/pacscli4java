@@ -148,7 +148,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 	 */
 	public void start(){
 		if(!this.loopStarted){
-			new Thread(){
+			new Thread("Pacswitch recv"){
 				@Override
 				public void run(){
 					try{ pacLoop(); }
@@ -237,6 +237,16 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		@Deprecated
 		public static final void STREAM(PacswitchAbstractClient cli,String id) throws IOException{
 			call(cli,"STREAM",id);
+		}
+		
+		/**
+		 * Look up to see if the user exists
+		 * @param cli Abstract client
+		 * @param id 
+		 * @throws IOException
+		 */
+		public static final void LOOKUP(PacswitchAbstractClient cli,String id) throws IOException{
+			call(cli,"LOOKUP",id);
 		}
 		
 		/**

@@ -1,9 +1,9 @@
 // Fork me on GitHub! https://github.com/aleozlx/pacswitch
-//package com.aleozlx.pacswitch;
-//import java.net.*;
+package com.aleozlx.pacswitch;
+import java.net.*;
 //import java.io.*;
-//
-//public class PacswitchSocket extends Socket{
+
+public class PacswitchSocket extends Socket{
 //	protected String to,device,id;
 //	FutureObject<String> _isAuthenticated=new FutureObject<String>("unconnected");
 //	protected PacswitchSocket(PacswitchMessager m) throws IOException{ super(m.host,m.port); }
@@ -11,4 +11,4 @@
 //	public final String getDevice(){ return this.device; }
 //	public final String getId(){ return this.id; }
 //	public final boolean isAuthenticated(){ return Synchronizer.isAuthenticated(this._isAuthenticated); }
-//}
+}

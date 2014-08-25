@@ -188,6 +188,10 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	@Override
 	protected final void onServerResponse(String title, String msg){
 		if(title.equals("LOGIN"))this._isAuthenticated.set(msg);
+		else if(title.equals("LOOKUP")){
+			FutureObject<String> svrres=msgtracker.get("LOOKUP");
+			if(svrres!=null)svrres.set(msg);
+		}
 //		else if(title.equals("STREAM")){
 //			FutureObject<String> svrres=msgtracker.get(SVRRES_STREAM);
 //			if(svrres!=null)svrres.set(msg);

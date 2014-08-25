@@ -81,7 +81,7 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	 * counts of pending messages
 	 */
 	public void notifyPendingCounts(){
-		new Thread(){
+		new Thread("GM Notifier"){
 			@Override
 			public void run(){
 				Map<String,Integer> ct=inbox.count();
@@ -119,7 +119,7 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	/**
 	 * Untracked message handlers
 	 */
-	public UntrackedMessagerHandlerMapping untrackedHandlers=new UntrackedMessagerHandlerMapping(){
+	public UntrackedMessagerHandlerMap untrackedHandlers=new UntrackedMessagerHandlerMap(){
 		private static final long serialVersionUID = 1L;
 		@Override
 		protected void miss(String from,String id,String messager) { onUntrackedMessageHandlerMissing(from,id,messager); }	
@@ -133,7 +133,7 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	 */
 	protected void dispatchUntracked(final String from,final String id,final String message){
 		untrackedHandlers.hint(from,id,message);
-		new Thread(){
+		new Thread("GM UMDispatcher"){
 			@Override
 			public void run(){
 				untrackedHandlers.handleMessage(from, id, message);}}.start();

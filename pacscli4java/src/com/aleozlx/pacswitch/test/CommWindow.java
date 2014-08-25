@@ -139,16 +139,27 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 	}
 
 	@Override
-	public String handleMessage(String from, String message) {
+	public String handleMessage(final String from, final String message) {
 		if(target.equals(from)){
-			print(from,message);
+			SwingUtilities.invokeLater(new Runnable(){
+				@Override
+			    public void run() { print(from,message); }
+			});
 			return "ACK";
 		}
 		else return null;
 	}
 	
 	@Override
-	public void refreshPendingCounts(Map<String,Integer> ct){
+	public void refreshPendingCounts(final Map<String,Integer> ct){
+		SwingUtilities.invokeLater(new Runnable(){
+			@Override
+		    public void run() { _refreshPendingCounts(ct); }
+		});
+		
+	}
+	
+	private void _refreshPendingCounts(final Map<String, Integer> ct) {
 		for(String friend:friendsmap.keySet()){
 			JMenuItem fmi=friendsmap.get(friend);
 			if(ct.containsKey(friend)){
@@ -163,7 +174,7 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 		txtInput.setText("");
 		if(msg.trim().equals(""))return;
 		if(!target.equals("")){
-			new Thread(){
+			new Thread("SendAsync"){
 				@Override
 				public void run(){
 					try {
@@ -196,7 +207,6 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 		cw.setTarget(this.target);
 	}
 	private void onClose(){
-		setVisible(false);
 		dispose();
 		pm.handlers.remove(this);
 	}
