@@ -13,7 +13,6 @@ public class Main {
 			protected boolean check(String userid,String password){
 				if(pm.connect(userid, password)&&pm.isAuthenticated()){
 					CommWindow first=new CommWindow(pm);
-					pm.handlers.add(first);
 					first.setVisible(true);
 					return true;
 				}

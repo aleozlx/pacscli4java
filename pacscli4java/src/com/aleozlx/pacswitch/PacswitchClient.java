@@ -1,15 +1,22 @@
-// Fork me on GitHub! https://github.com/aleozlx/pacswitch
 package com.aleozlx.pacswitch;
 import java.io.*;
 import java.net.*;
+import com.aleozlx.pacswitch.types.*;
 
 /**
- * Pacswitch client implementation
+ * Pacswitch client implementation<br/><br/>
+ * 
+ * Fork me on github: <br/>
+ * <a href="https://github.com/aleozlx/pacscli4java">https://github.com/aleozlx/pacscli4java</a><br/>
+ * 
+ * And feel free to pay a visit to the server project:<br/>
+ * <a href="https://github.com/aleozlx/pacswitch">https://github.com/aleozlx/pacswitch</a><br/>
+ * 
  * @author Alex
  * @version 1.3.1
  * @since June 3, 2014
  */
-public abstract class PacswitchClient extends PacswitchAbstractClient {
+public abstract class PacswitchClient implements PacswitchAPI {
 	/**
 	 * Port
 	 */
@@ -56,7 +63,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 	Socket socket;
 	
 	@Override
-	Socket getSocket(){ return socket; }
+	public Socket getSocket(){ return socket; }
 
 	@Override
 	public final boolean pacInit(String user,String password,String host,String clienttype){
@@ -170,7 +177,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 	 * @param title Server response title
 	 * @param msg Server response message
 	 */
-	protected void onServerResponse(String title, String msg){ }
+	protected abstract  void onServerResponse(String title, String msg);
 
 	/**
 	 * Close the connection permanently.
@@ -215,7 +222,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 	/**
 	 * Pacswitch protocol implementation
 	 */
-	static class PacswitchProtocol {
+	public static class PacswitchProtocol {
 		/**
 		 * Request for authentication
 		 * @param cli Abstract client
@@ -224,7 +231,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * @param clienttype A unique string that distinguishes different kind of clients
 		 * @throws IOException
 		 */
-		public static final void AUTH(PacswitchAbstractClient cli,String username,String password,String clienttype) throws IOException{	
+		public static final void AUTH(PacswitchAPI cli,String username,String password,String clienttype) throws IOException{	
 			call(cli,"AUTH",username,password,clienttype);
 		}
 
@@ -235,7 +242,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * @throws IOException
 		 */
 		@Deprecated
-		public static final void STREAM(PacswitchAbstractClient cli,String id) throws IOException{
+		public static final void STREAM(PacswitchAPI cli,String id) throws IOException{
 			call(cli,"STREAM",id);
 		}
 		
@@ -245,7 +252,7 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * @param id 
 		 * @throws IOException
 		 */
-		public static final void LOOKUP(PacswitchAbstractClient cli,String id) throws IOException{
+		public static final void LOOKUP(PacswitchAPI cli,String id) throws IOException{
 			call(cli,"LOOKUP",id);
 		}
 		
@@ -255,14 +262,14 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * @param ss Protocol method and arguments
 		 * @throws IOException When data cannot be sent due to network issues
 		 */
-		public static final void call(PacswitchAbstractClient cli,String ... ss) throws IOException{
+		public static final void call(PacswitchAPI cli,String ... ss) throws IOException{
 			Socket s=cli.getSocket();
 			synchronized(s){
 				OutputStream out=s.getOutputStream();
 				out.write(PACKAGE_START);
 				out.write(PACKAGE_TEXT);
 				for(String str:ss){
-					out.write(str.getBytes("ascii"));
+					out.write(str.getBytes(ASCII));
 					out.write(32);
 				}
 				out.write(PACKAGE_END);
@@ -276,12 +283,12 @@ public abstract class PacswitchClient extends PacswitchAbstractClient {
 		 * @param buffer Data to be sent
 		 * @throws IOException When data cannot be sent due to network issues
 		 */
-		public static final void data(PacswitchAbstractClient cli,String recv,byte[] ... buffer) throws IOException {
+		public static final void data(PacswitchAPI cli,String recv,byte[] ... buffer) throws IOException {
 			Socket s=cli.getSocket();
 			synchronized(s){
 				OutputStream os=s.getOutputStream(); 
 				os.write(PACKAGE_START);
-				os.write(recv.getBytes("ascii"));
+				os.write(recv.getBytes(ASCII));
 				os.write(10);
 				for(byte[] data:buffer)os.write(data);
 				os.write(PACKAGE_END);

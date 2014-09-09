@@ -7,18 +7,18 @@ import java.net.Socket;
  * which is used to facilitate WAN connections by communicating
  * with a pacswitch server, thereby user data are switched
  * so as to pass NAT routers both ways. Here are the standards
- * of the lower-level API.
+ * of the lower-level API.<br/><br/>
  * 
- * Fork me on github:
- * https://github.com/aleozlx/pacscli4java
+ * Fork me on github: <br/>
+ * <a href="https://github.com/aleozlx/pacscli4java">https://github.com/aleozlx/pacscli4java</a><br/>
  * 
- * And pay a visit to the server project:
- * https://github.com/aleozlx/pacswitch
+ * And feel free to pay a visit to the server project:<br/>
+ * <a href="https://github.com/aleozlx/pacswitch">https://github.com/aleozlx/pacswitch</a><br/>
  * 
  * @author Alex
- * @since May, 2014
+ * @since May 20, 2014
  */
-interface IPacswitchAPI{	
+public interface PacswitchAPI{	
 	/**
 	 * Package start sequence: (dec) 5,65,76,88,80,65,67,83,86,82
 	 */
@@ -94,17 +94,12 @@ interface IPacswitchAPI{
 	 * @param recv Receiver ID
 	 */
 	void pacStart(String recv);
-}
-
-/**
- * PacswitchAbstractClient
- * @author Alex
- */
-abstract class PacswitchAbstractClient implements IPacswitchAPI {
+	
 	/**
 	 * The socket from which I/O streams can be fetched,
 	 * also is necessary for protocol implementation.
+	 * This is not actually part of pacswitch API standard
 	 * @return The socket from which I/O streams can be fetched
 	 */
-	abstract Socket getSocket();
+	Socket getSocket();
 }

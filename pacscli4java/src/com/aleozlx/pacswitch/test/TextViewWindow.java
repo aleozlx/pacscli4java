@@ -2,12 +2,10 @@ package com.aleozlx.pacswitch.test;
 
 import java.awt.Rectangle;
 import java.awt.event.*;
-
 import javax.swing.*;
+import com.aleozlx.pacswitch.types.*;
 
-import com.aleozlx.pacswitch.*;
-
-public class TextViewWindow extends ModernFrame implements IUntrackedMessageHandler {
+public class TextViewWindow extends ModernFrame implements ISignalHandler {
 	private static final long serialVersionUID = 1L;
 	private String id="";
 	private String to="";
@@ -59,7 +57,7 @@ public class TextViewWindow extends ModernFrame implements IUntrackedMessageHand
 	}
 	
 	private void close(boolean incoming){
-		if(incoming)pm.untrackedHandlers.remove(id, this);
+		if(incoming)pm.removeSignalHandler(id, this);
 		this.dispose();
 	}
 	
@@ -76,7 +74,7 @@ public class TextViewWindow extends ModernFrame implements IUntrackedMessageHand
 	}
 
 	@Override
-	public void handleMessage(final String from, final String message) {
+	public void handleSignal(final String from, final String message) {
 		final int ii=message.indexOf("+");
 		final String header=message.substring(0, ii);
 		final String[] args=header.split(" ");

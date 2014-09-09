@@ -1,10 +1,10 @@
-package com.aleozlx.pacswitch;
+package com.aleozlx.pacswitch.types;
 import java.util.*;
 
 public class MessageInbox extends HashMap<String,LinkedList<PendingMessage>> {
 	private static final long serialVersionUID = 1L;
 
-	protected void pend(String from, String message){
+	public void pend(String from, String message){
 		if(!containsKey(from))this.put(from, new LinkedList<PendingMessage>());
 		LinkedList<PendingMessage> list=get(from);
 		list.add(new PendingMessage(from, message));

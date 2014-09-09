@@ -1,18 +1,14 @@
 package com.aleozlx.pacswitch.test;
 
 import java.awt.Toolkit;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.datatransfer.*;
 import java.awt.event.*;
-import java.io.IOException;
+import java.io.*;
 import java.util.*;
-
 import javax.swing.*;
+import com.aleozlx.pacswitch.types.*;
 
-import com.aleozlx.pacswitch.*;
-
-public class CommWindow extends ModernFrame implements IMessageHandler {
+public class CommWindow extends ModernFrame {
 	private static final long serialVersionUID = 1L;
 	private final Messager pm;
 	private final Storage storage;
@@ -24,6 +20,7 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 	private JTextArea txtOutput;
 	private JButton btnOK;
 	private Map<String,JMenuItem> friendsmap;
+	private IEventListener[] msg_events;
 	
 	public CommWindow(Messager messager){
 		this.pm=messager;
@@ -32,9 +29,59 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 		this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 		this.addWindowListener(new WindowAdapter(){
 			public void windowClosing(WindowEvent arg0) {
-				if(pm.handlers.size()==1)confirmExit(); else onClose();}});
+				if(pm.countEventListener(IEventListener.Type.MessageReceived)==1)confirmExit(); 
+				else onClose();
+			}
+		});
+		
+		this.msg_events=new IEventListener[]{
+			new IEventListener(){
+				@Override
+				public Type getType() {
+					return Type.MessageReceived;
+				}
+				
+				@Override
+				public void run(Args args) {
+					String ack=CommWindow.this.handleMessage((String)args.get(K_FROM),(String)args.get(K_MSG));
+					if(ack!=null)args.ret(ack);
+				}
+			},
+			new IEventListener(){
+				@Override
+				public Type getType() {
+					return Type.PendingCountChanged;
+				}
+				
+				@Override
+				public void run(Args args) {
+					CommWindow.this.refreshPendingCounts(pm.inbox.count());
+				}
+			}
+		};
+		
+		for(IEventListener listener:this.msg_events)messager.addEventListener(listener);
 		this.setBounds(300,200,400,500);
 		setTarget(null);
+	}
+	
+	public String handleMessage(final String from, final String message) {
+		if(target.equals(from)){
+			SwingUtilities.invokeLater(new Runnable(){
+				@Override
+			    public void run() { print(from,message); }
+			});
+			return "ACK";
+		}
+		else return null;
+	}
+	
+	public void refreshPendingCounts(final Map<String,Integer> ct){
+		SwingUtilities.invokeLater(new Runnable(){
+			@Override
+		    public void run() { _refreshPendingCounts(ct); }
+		});
+		
 	}
 
 	private void loadFriends() {
@@ -137,27 +184,6 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 		txtOutput.append(output);
 		scrollToEnd();
 	}
-
-	@Override
-	public String handleMessage(final String from, final String message) {
-		if(target.equals(from)){
-			SwingUtilities.invokeLater(new Runnable(){
-				@Override
-			    public void run() { print(from,message); }
-			});
-			return "ACK";
-		}
-		else return null;
-	}
-	
-	@Override
-	public void refreshPendingCounts(final Map<String,Integer> ct){
-		SwingUtilities.invokeLater(new Runnable(){
-			@Override
-		    public void run() { _refreshPendingCounts(ct); }
-		});
-		
-	}
 	
 	private void _refreshPendingCounts(final Map<String, Integer> ct) {
 		for(String friend:friendsmap.keySet()){
@@ -202,13 +228,12 @@ public class CommWindow extends ModernFrame implements IMessageHandler {
 	}
 	private void onNewWindow() {
 		CommWindow cw=new CommWindow(pm);
-		pm.handlers.add(cw);
 		cw.setVisible(true);
 		cw.setTarget(this.target);
 	}
 	private void onClose(){
 		dispose();
-		pm.handlers.remove(this);
+		for(IEventListener listener:this.msg_events)pm.removeEventListener(listener);
 	}
 	private void confirmExit(){
 		if (JOptionPane.showConfirmDialog(this,

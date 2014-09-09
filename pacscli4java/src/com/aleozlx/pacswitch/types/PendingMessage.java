@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch;
+package com.aleozlx.pacswitch.types;
 import java.util.*;
 public class PendingMessage {
 	protected Date recvtime;

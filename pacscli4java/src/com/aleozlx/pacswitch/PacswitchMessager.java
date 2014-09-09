@@ -1,20 +1,25 @@
-// Fork me on GitHub! https://github.com/aleozlx/pacswitch
 package com.aleozlx.pacswitch;
 import java.util.*;
 import java.io.*;
 
+import com.aleozlx.pacswitch.types.*;
+
 /**
  * Message protocol based on paswitch protocol
- * Facilitates both tracked and untracked messages
- * transmission and provide request-response mapping.
+ * facilitates both tracked and untracked messages
+ * transmission and provide request-response mapping.<br/><br/>
+ * 
+ * Fork me on github: <br/>
+ * <a href="https://github.com/aleozlx/pacscli4java">https://github.com/aleozlx/pacscli4java</a><br/>
+ * 
+ * And feel free to pay a visit to the server project:<br/>
+ * <a href="https://github.com/aleozlx/pacswitch">https://github.com/aleozlx/pacswitch</a><br/>
+ * 
  * @author Alex
  * @version 1.3.1
  * @since June 27, 2014
  */
-public abstract class PacswitchMessager extends PacswitchClient {
-//	protected static final String SVRRES_STREAM="SVRRES_STREAM";
-//
-//	protected static final String STREAM_DENIED="";
+public class PacswitchMessager extends PacswitchClient {
 	
 	/**
 	 * FutureObject tracker with ID format specifications
@@ -34,22 +39,13 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		public Tracker() { super(MessageProtocol.RIDLEN,RIDRANGE); }	
 	}
 
-	/**
-	 * Authentication state
-	 */
-	FutureObject<String> _isAuthenticated=new FutureObject<String>("unconnected");
-
+	static enum AuthenticationState{ Unconnected, Pending, OK, Failed; }
+	FutureObject<AuthenticationState> _isAuthenticated=new FutureObject<AuthenticationState>(AuthenticationState.Unconnected);
+	
 	/**
 	 * Request/response mapping
 	 */
 	protected FutureTracker<String> msgtracker=new Tracker<String>();
-	
-	//protected FutureTracker<String> stream_tracker=new Tracker<String>();
-
-//	/**
-//	 * Incoming connection mapping
-//	 */
-//	protected FutureTracker<PacswitchSocket> socktracker=new Tracker<PacswitchSocket>();
 
 	/**
 	 * Device name
@@ -67,23 +63,34 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	public boolean connect(String userid,String password,String device,String host,String clienttype){
 		this.device=device;
 		this._isAuthenticated.reset();
-		if(!this.pacInit(userid,password,host,clienttype))return false;
-		else{ this.start(); this._isAuthenticated.value=""; return true; }
+		if(!this.pacInit(userid,password,host,clienttype))
+			return false;
+		else{ 
+			this.start();
+			this._isAuthenticated.force(AuthenticationState.Pending); 
+			return true;
+		}
 	}
 
 	/**
 	 * Authentication state.
 	 * @return msg Authentication state
 	 */
-	public final boolean isAuthenticated(){ return Synchronizer.isAuthenticated(this._isAuthenticated); }
+	public final boolean isAuthenticated(){ 
+		if(_isAuthenticated.valueEquals(AuthenticationState.Unconnected))return false;
+		else{
+			_isAuthenticated.until(3000);
+			return _isAuthenticated.valueEquals(AuthenticationState.OK);
+		}
+	}
 
 	public final String getDeviceName(){ return this.device; }
 	public final String getUserID(){ return this.user; }
 	
-	/**
-	 * Affirmative response message sequence
-	 */
-	public static final byte[] AFFIRMATIVE=new byte[]{10,15};
+//	/**
+//	 * Affirmative response message sequence
+//	 */
+//	public static final byte[] AFFIRMATIVE=new byte[]{10,15};
 	
 	/**
 	 * Give a response
@@ -92,18 +99,21 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	 * @param response Response message
 	 */
 	protected final void respond(String to,byte[] buffer,String response){
-		try{ _sendResponse(to,buffer,response.getBytes(MessageProtocol.ENC)); }
+		try{
+			byte[] resdata=response.getBytes(MessageProtocol.ENC);
+			MessageProtocol.send(this,MessageProtocol.Type.Response,to,resdata,Arrays.copyOfRange(buffer,1,MessageProtocol.RIDLEN+1));
+		}
 		catch(UnsupportedEncodingException e){ }
 	}
 	
-	/**
-	 * Give an affirmative message
-	 * @param to Receiver ID
-	 * @param buffer Request buffer
-	 */
-	protected final void affirm(String to,byte[] buffer){
-		_sendResponse(to,buffer,AFFIRMATIVE);
-	}
+//	/**
+//	 * Give an affirmative message
+//	 * @param to Receiver ID
+//	 * @param buffer Request buffer
+//	 */
+//	protected final void affirm(String to,byte[] buffer){
+//		_sendResponse(to,buffer,AFFIRMATIVE);
+//	}
 
 	/**
 	 * Handle a response or a request.
@@ -115,16 +125,14 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		String message;
 		try{ message=new String(buffer,MessageProtocol.RIDLEN+1,buffer.length-MessageProtocol.RIDLEN-1,MessageProtocol.ENC); }
 		catch(UnsupportedEncodingException e){ return; }
-		switch(MessageType.fromByte(buffer[0])){
-		case Request:
+		switch(MessageProtocol.Type.fromByte(buffer[0])){
+		case Request:{
 			String response=this.handleMessage(sender,message);
 			respond(sender,buffer,response);
 			break;
-		case Ping:	
-			this.affirm(sender, buffer);
-			break;
-			
-		// ===== Untracked Message =====
+		}
+		
+		// ===== Signals =====
 		case Response:
 			try{
 				String requestID=new String(buffer,1,MessageProtocol.RIDLEN,ASCII);
@@ -132,52 +140,30 @@ public abstract class PacswitchMessager extends PacswitchClient {
 			}
 			catch(UnsupportedEncodingException e){ }
 			break;
-		case Signal:
+		case Signal: //develop a UDP version of Signal
 			try{
 				if(buffer[1]!=-1){
 					String requestID=new String(buffer,1,MessageProtocol.RIDLEN,ASCII);
-					this.handleUntrackedMessage(sender,requestID,message);
+					this.handleSignal(sender,requestID,message);
 				}
-				else this.handleUntrackedMessage(sender, message);
+				else this.handleSignal(sender, message);
 			}
 			catch(UnsupportedEncodingException e){ }
 			break;
+		case Ping:
+			if(message.equals(MessageProtocol.PingReq)){
+				String response=String.format("%1$s\t%2$s", this.getUserID(),this.getDeviceName());
+				this.sendPing(sender, response);
+			}
+			else{
+				IEventListener.Args args=new IEventListener.Args();
+				String[] from_dev=message.split("\t");
+				args.put(IEventListener.K_FROM, from_dev[0]);
+				args.put(IEventListener.K_DEVICE, from_dev[1]);
+				this.listeners.fireEvent(IEventListener.Type.PingEcho, args);
+			}
+			break;
 		default: break;
-			
-//		case STREAMREQ:
-//			if(message.equals(this.getDeviceName())){
-//				try{ 
-//					String requestID=new String(buffer,1,RIDLEN,ASCII);
-//					FutureObject<String> svrres=new FutureObject<String>();
-//					stream_tracker.put(requestID, svrres);
-//					PacswitchProtocol.STREAM(socket,requestID); 
-//					svrres.until(10,60);
-//					if(svrres.isAvailable()){
-//						String[] args=svrres.get().split(" ");
-//						String code1=args[1],code2=args[2];
-//						PacswitchSocket ps=new PacswitchSocket(this);
-//						/*
-//						 - create socket and initialize it
-//						 - initiate new thread and call acceptSocket
-//						 - response the invite code to other side
-//						*/
-//					}
-//				}
-//				catch(IOException e){ }
-//			}
-//			else{
-//				try{ 
-//					pacSendData(sender,
-//						MessageType.STREAMRES.getData(),
-//						Arrays.copyOfRange(buffer,1,RIDLEN+1),
-//						STREAM_DENIED.getBytes(ENC)); 
-//				}
-//				catch(UnsupportedEncodingException e){ }
-//			}
-//			break;
-//		case STREAMRES:
-//			// - create socket and initialize it
-//			break;
 		}
 	}
 
@@ -187,7 +173,8 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	 */
 	@Override
 	protected final void onServerResponse(String title, String msg){
-		if(title.equals("LOGIN"))this._isAuthenticated.set(msg);
+		if(title.equals("LOGIN"))
+			this._isAuthenticated.set(msg.equals("OK")?AuthenticationState.OK:AuthenticationState.Failed);
 		else if(title.equals("LOOKUP")){
 			FutureObject<String> svrres=msgtracker.get("LOOKUP");
 			if(svrres!=null)svrres.set(msg);
@@ -208,69 +195,77 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	 */
 	public String send(String to, String message) throws PacswitchException{
 		FutureObject<String> mr=null;
-		PacswitchException e;
-		try{ 
-			mr=this._send(MessageType.Request,to,message); 
-			e=mr.getException();
-			if(e!=null)throw e;
-			return mr.get(Synchronizer.TIMEOUT_DEFALUT,new UnreachableException(to,"No response"));
-		}
-		finally{ if(mr!=null)this.msgtracker.remove(mr.getTag()); }
-	}
-
-	private final FutureObject<String> _send(MessageType msgtype,String to, String message){
-		FutureObject<String> mr=new FutureObject<String>();
-		if(this.isAuthenticated()){
-			String requestID=msgtracker.create(mr);
-			mr.tag=requestID;
-			try{
-				if(MessageProtocol.send(this,msgtype,to,message.getBytes(MessageProtocol.ENC),requestID.getBytes(ASCII))) return mr;
-				else return mr.exceptionSugar(new UnreachableException(to,"Offline"));
+		try{ 	
+			 mr=new FutureObject<String>();
+			if(this.isAuthenticated()){
+				String requestID=msgtracker.create(mr);
+				mr.tag=requestID;
+				try{
+					if(!MessageProtocol.send(this,MessageProtocol.Type.Request,to,message.getBytes(MessageProtocol.ENC),requestID.getBytes(ASCII)))
+						throw new UnreachableException(to,"Offline");
+				}
+				catch(UnsupportedEncodingException e){ 
+					throw new PacswitchException("Unsupported encoding",e);
+				}
 			}
-			catch(UnsupportedEncodingException e){ return mr.exceptionSugar(new PacswitchException("Unsupported encoding",e)); }
+			else throw new PacswitchException("Not authenticated");
+
+			return mr.get(3000,new UnreachableException(to,"No response"));
+		} 
+		catch (Exception e) {
+			if(e instanceof UnreachableException) throw (UnreachableException)e;
+			else throw new PacswitchException("Exception",e);
 		}
-		else return mr.exceptionSugar(new PacswitchException("Not authenticated"));
-	}
-	
-	private final void _sendResponse(String to,byte[] buffer,byte[] response){
-		MessageProtocol.send(this,MessageType.Response,to,response,Arrays.copyOfRange(buffer,1,MessageProtocol.RIDLEN+1));
+		finally{
+			if(mr!=null)this.msgtracker.remove(mr.getTag());
+		}
 	}
 	
 	/**
 	 * Send an untracked message without an ID.
-	 * @param msgtype Message type
 	 * @param to Receiver ID
 	 * @param message
 	 * @return Whether message was sent successfully
 	 */
-	protected final boolean sendUntracked(MessageType msgtype,String to, String message){
-		try { return MessageProtocol.send(this,msgtype,to,message.getBytes(MessageProtocol.ENC),MessageProtocol.SANSID); } 
+	public final boolean sendSignal(String to,String message){
+		try { return MessageProtocol.send(this,MessageProtocol.Type.Signal,to,message.getBytes(MessageProtocol.ENC),MessageProtocol.SANSID); } 
 		catch (UnsupportedEncodingException e1) { return false; }
+	}
+	
+	protected final void sendPing(String to,String response){
+		try { MessageProtocol.send(this,MessageProtocol.Type.Ping,to,response.getBytes(MessageProtocol.ENC),MessageProtocol.SANSID); } 
+		catch (UnsupportedEncodingException e1) { }
+	}
+	
+	public final void sendPing(String to){
+		try { MessageProtocol.send(this,MessageProtocol.Type.Ping,to,MessageProtocol.PingReq.getBytes(MessageProtocol.ENC),MessageProtocol.SANSID); } 
+		catch (UnsupportedEncodingException e1) { }
 	}
 	
 	/**
 	 * Send an untracked message without a target ID.
-	 * @param msgtype Message type
 	 * @param to Receiver ID
 	 * @param message 
 	 * @param id Target ID. This is for message dispatching at the other side
 	 * @return Whether message was sent successfully
 	 */
-	protected final boolean sendUntracked(MessageType msgtype,String to, String message,byte[] id){
-		try { return MessageProtocol.send(this,msgtype,to,message.getBytes(MessageProtocol.ENC),id); } 
+	protected final boolean sendSignal(String to,String message, byte[] id){
+		try { return MessageProtocol.send(this,MessageProtocol.Type.Signal,to,message.getBytes(MessageProtocol.ENC),id); } 
 		catch (UnsupportedEncodingException e1) { return false; }
 	}
-
-//	protected final FutureObject<PacswitchSocket> _punch(String to, String device){
-//		FutureObject<PacswitchSocket> r=new FutureObject<PacswitchSocket>();
-//		FutureObject<String> sres=this._send(MessageType.STREAMREQ,to,device);
-//		PacswitchException e=sres.getException();
-//		r.tag=sres.getTag();
-//		if(e!=null)return r.exceptionSugar(e);
-//		else{ socktracker.put(sres.getTag(),r); return r; }
-//	}
-
-//	public void acceptSocket(String from, PacswitchSocket s){ }
+	
+	protected EventListenerList listeners=new EventListenerList();
+	public void addEventListener(IEventListener listener){
+		this.listeners.add(listener);
+	}
+	
+	public void removeEventListener(IEventListener listener){
+		this.listeners.remove(listener);
+	}
+	
+	public int countEventListener(IEventListener.Type type){
+		return this.listeners.countEvent(type);
+	}
 
 	/**
 	 * Handle a message.
@@ -278,7 +273,15 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	 * @param message Message content
 	 * @return Response to the message
 	 */
-	protected abstract String handleMessage(String from, String message);
+	protected String handleMessage(String from, String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_FROM, from);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.MessageReceived, args);
+		Object ret=args.getRet();
+		if(ret instanceof String)return (String)ret;
+		else return "";
+	}
 	
 	/**
 	 * Handle an untracked message with an ID.
@@ -286,14 +289,25 @@ public abstract class PacswitchMessager extends PacswitchClient {
 	 * @param id Target ID
 	 * @param message
 	 */
-	protected abstract void handleUntrackedMessage(String from,String id, String message);
+	protected void handleSignal(String from,String id, String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_FROM, from);
+		args.put(IEventListener.K_ID, id);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.SignalReceived, args);
+	}
 	
 	/**
 	 * Handle an untracked message without an ID
 	 * @param from Sender ID
 	 * @param message
 	 */
-	protected abstract void handleUntrackedMessage(String from, String message);
+	protected void handleSignal(String from, String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_FROM, from);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.SignalReceived, args);
+	}
 	
 	/**
 	 * Get a standard ID
@@ -311,6 +325,8 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		 * Message encoding
 		 */
 		public static final String ENC="utf-8";
+		
+		public static final String PingReq="DEVICES";
 
 		/**
 		 * Request ID length
@@ -342,16 +358,79 @@ public abstract class PacswitchMessager extends PacswitchClient {
 		 */
 		public static final boolean send(
 			PacswitchMessager cli,
-			MessageType msgtype, String to,
+			Type msgtype, String to,
 			byte[] message, byte[] rId
 		){
 			if(!msgtype.isTracked()){
-				if(msgtype.isResponse())return cli.pacSendData(to,MessageType.Response.getData(),rId,message);
+				if(msgtype.isResponse())return cli.pacSendData(to,Type.Response.getData(),rId,message);
 				else if(cli.isAuthenticated())return cli.pacSendData(to,msgtype.getData(),rId,message);
 				else return false;
 			}
 			else if(cli.isAuthenticated()) return cli.pacSendData(to,msgtype.getData(),rId,message);
 			else return false;
 		}
+		
+		/**
+		 * Message type in message protocol
+		 */
+		static enum Type{
+			/**
+			 * Request message
+			 */
+			Request(1),
+			
+			/**
+			 * Response message
+			 */
+			Response(0),
+			
+			/**
+			 * Message of unknown type
+			 */
+			Unknown(-1),
+			
+			/**
+			 * Stream request
+			 */
+			StreamReq(2),
+			
+			/**
+			 * Stream response
+			 */
+			StreamRes(-2),
+			
+			/**
+			 * Ordinary untracked message
+			 */
+			Signal(-128),
+			
+			/**
+			 * Ping message
+			 */
+			Ping(-127)
+			
+			;
+
+			private byte code;
+			private Type(int code){ this.code=(byte)code; }
+			public final byte getByte(){ return code; }
+			public final byte[] getData(){ return new byte[]{code}; }
+			public final boolean isTracked(){ return code>0; }
+			public final boolean isResponse(){ return code==0; }
+			
+			/**
+			 * Convert byte code to MessageType
+			 * @return MessageType object corresponding to the specified byte code
+			 */
+			public final static Type fromByte(byte code){
+				switch(code){
+					case 1: return Request; case 0: return Response;
+					case 2: return StreamReq; case -2: return StreamRes;
+					case -128: return Signal; case -127: return Ping; 
+					default: return Unknown;
+				}
+			}
+		}
 	}
 }
+

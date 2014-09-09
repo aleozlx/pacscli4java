@@ -2,17 +2,18 @@ package com.aleozlx.pacswitch;
 
 import java.util.*;
 
+import com.aleozlx.pacswitch.types.*;
+
 /**
  * GatewayMessager
  * @author Alex
- * @version 1.3.1
  * @since July 14, 2014
  */
-public abstract class GatewayMessager extends PacswitchMessager {
-	/**
-	 * Tracked messages handlers
-	 */
-	public List<IMessageHandler> handlers=new LinkedList<IMessageHandler>();
+public class GatewayMessager extends PacswitchMessager {
+//	/**
+//	 * Tracked messages handlers
+//	 */
+//	public List<IMessageHandler> handlers=new LinkedList<IMessageHandler>();
 	
 	/**
 	 * Message inbox for messages not read immediately
@@ -53,7 +54,7 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	protected String handleMessage(String from, String message) {
 		if(!ENAllowTracked)return NAK;
 		else if(!ENFilterTracked||filter(from,message)){ 
-			String res=this.dispatch(from, message);
+			String res=super.handleMessage(from, message);
 			if(res==null){
 				inbox.pend(from,message); 
 				notifyPendingCounts();
@@ -72,7 +73,7 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	}
 	
 	@Override
-	protected void handleUntrackedMessage(String from,String id, String message){
+	protected void handleSignal(String from,String id, String message){
 		if(ENAllowUntracked&&(!ENFilterUnTracked||filter(from,message)))dispatchUntracked(from,id,message);
 	}
 	
@@ -81,14 +82,17 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	 * counts of pending messages
 	 */
 	public void notifyPendingCounts(){
-		new Thread("GM Notifier"){
-			@Override
-			public void run(){
-				Map<String,Integer> ct=inbox.count();
-				if(handlers!=null)for(IMessageHandler i:handlers) 
-					i.refreshPendingCounts(ct);
-			}
-		}.start();
+		IEventListener.Args args=new IEventListener.Args();
+		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged, args);
+//		new Thread("GM Notifier"){
+//			@Override
+//			public void run(){
+//				Map<String,Integer> ct=inbox.count();
+//				if(handlers!=null)for(IMessageHandler i:handlers) 
+//					i.refreshPendingCounts(ct);
+//			}
+//		}.start();
+		
 	}
 	
 	/**
@@ -102,28 +106,9 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	}
 	
 	/**
-	 * Dispatch tracked messages
-	 * @param from Sender ID
-	 * @param message
-	 * @return Whatever the first responsible handler returns, or null if none does
-	 */
-	protected String dispatch(String from, String message){
-		String res=null;
-		for(IMessageHandler i:handlers){
-			String s=i.handleMessage(from, message);
-			if(res==null)res=s;
-		}
-		return res;
-	}
-	
-	/**
 	 * Untracked message handlers
 	 */
-	public UntrackedMessagerHandlerMap untrackedHandlers=new UntrackedMessagerHandlerMap(){
-		private static final long serialVersionUID = 1L;
-		@Override
-		protected void miss(String from,String id,String messager) { onUntrackedMessageHandlerMissing(from,id,messager); }	
-	};
+	SignalHandlerMap sighandlers=new SignalHandlerMap();
 	
 	/**
 	 * Dispatch untracked messages
@@ -132,17 +117,51 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void dispatchUntracked(final String from,final String id,final String message){
-		untrackedHandlers.hint(from,id,message);
-		new Thread("GM UMDispatcher"){
+		sighandlers.hint(from,id,message);
+		new Thread("GM SigDispatcher"){
 			@Override
 			public void run(){
-				untrackedHandlers.handleMessage(from, id, message);}}.start();
+				sighandlers.handleMessage(from, id, message);}}.start();
+	}
+	
+	class SignalHandlerMap extends HashMap<String,LinkedList<ISignalHandler>> {
+		private static final long serialVersionUID = 1L;
+
+		public void handleMessage(String from,String id, String message){
+			if(!containsKey(id))onSignalHandlerMissing(from,id,message);
+			if(containsKey(id))
+				for(ISignalHandler i:get(id))
+					i.handleSignal(from, message);
+		}
+		
+		public void hint(String from, String id, String message){
+			if(!containsKey(id))onSignalHandlerMissing(from,id,message);
+		}
+		
+		public void add(String id,ISignalHandler h){
+			if(!containsKey(id))put(id,new LinkedList<ISignalHandler>());
+			get(id).add(h);
+		}
+		
+		public void remove(String id,ISignalHandler h){
+			if(containsKey(id))get(id).remove(h);
+		}
+	}
+	
+	public void addSignalHandler(String id,ISignalHandler h){
+		this.sighandlers.add(id, h);
+	}
+	
+	public void removeSignalHandler(String id,ISignalHandler h){
+		this.sighandlers.remove(id, h);
 	}
 	
 	@Override
 	public String send(String to, String message) throws PacswitchException{
 		onMessageSending(to,message);
-		return super.send(to, message);
+		String r=super.send(to, message);
+		if(r.equals(ACK))onMessageSent(to,message);
+		return r;
 	}
 	
 	/**
@@ -150,21 +169,48 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	 * @param to Sender ID
 	 * @param message
 	 */
-	protected abstract void onMessageSending(String to,String message);
+	protected void onMessageSending(String to,String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_TO, to);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.MessageSending, args);
+	}
+	
+	/**
+	 * Message outgoing event (only successful ones)
+	 * @param to Sender ID
+	 * @param message
+	 */
+	protected void onMessageSent(String to,String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_TO, to);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.MessageSent, args);
+	}
 	
 	/**
 	 * Message blocked event
 	 * @param from Receiver ID
 	 * @param message
 	 */
-	protected abstract void onMessageBlocked(String from,String message);
+	protected void onMessageBlocked(String from,String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_FROM, from);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.MessageBlocked, args);
+	}
 	
 	/**
 	 * Message incoming event
 	 * @param from Sender ID
 	 * @param message
 	 */
-	protected abstract void onMessageAllowed(String from,String message);
+	protected void onMessageAllowed(String from,String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_FROM, from);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.MessageAllowed, args);
+	}
 	
 	/**
 	 * Untracked message handler missing event,
@@ -176,5 +222,13 @@ public abstract class GatewayMessager extends PacswitchMessager {
 	 * @param id Target ID
 	 * @param message
 	 */
-	protected abstract void onUntrackedMessageHandlerMissing(String from,String id,String message);
+	protected void onSignalHandlerMissing(String from,String id,String message){
+		IEventListener.Args args=new IEventListener.Args();
+		args.put(IEventListener.K_FROM, from);
+		args.put(IEventListener.K_ID, id);
+		args.put(IEventListener.K_MSG, message);
+		this.listeners.fireEvent(IEventListener.Type.SignalHandlerMissing, args);
+	}
+	
+
 }
