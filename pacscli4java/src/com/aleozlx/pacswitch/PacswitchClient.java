@@ -105,6 +105,8 @@ public abstract class PacswitchClient implements PacswitchAPI {
 		}
 		return false;
 	}
+	
+	public static final String SERVER_SIGNATURE="pacswitch";
 
 	@Override
 	public final void pacLoop() throws InterruptedException{
@@ -121,7 +123,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 						iIII-(iI+PACKAGE_START.length));
 				byte[] data=new byte[iII-(iIII+SENDER_SEP.length)];
 				System.arraycopy(mybuffer.buffer,iIII+SENDER_SEP.length,data,0,data.length);
-				if(sender.equals("pacswitch")){
+				if(sender.equals(SERVER_SIGNATURE)){
 					try{ 
 						final String TSEP=": "; String msg=new String(data,ASCII);
 						int ii=msg.indexOf(TSEP);
@@ -149,13 +151,15 @@ public abstract class PacswitchClient implements PacswitchAPI {
 			}
 		} while(true);
 	}
+	
+	public static final String T_PACSWITCH_RECV="Pacswitch recv";
 
 	/**
 	 * Start an event loop asynchronously for response data.
 	 */
 	public void start(){
 		if(!this.loopStarted){
-			new Thread("Pacswitch recv"){
+			new Thread(T_PACSWITCH_RECV){
 				@Override
 				public void run(){
 					try{ pacLoop(); }
@@ -203,26 +207,45 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	 * This is not actually implemented since it's considered unnecessary.
 	 */
 	@Override @Deprecated
-	public int pacSocketno(){ throw new Error("Not implemented"); }
+	public int pacSocketno(){ throw new Error(); }
 
 	/**
 	 * Send a package start sequence.
 	 * This is not actually implemented since it's both inefficient and unnecessary.
 	 */
 	@Override @Deprecated
-	public void pacStart(String recv){ throw new Error("Not implemented"); }
+	public void pacStart(String recv){ throw new Error(); }
 
 	/**
 	 * Send a package end sequence.
 	 * This is not actually implemented since it's both inefficient and unnecessary.
 	 */
 	@Override @Deprecated
-	public void pacEnd(){ throw new Error("Not implemented"); }
+	public void pacEnd(){ throw new Error(); }
 	
 	/**
 	 * Pacswitch protocol implementation
 	 */
 	public static class PacswitchProtocol {
+		public static final String M_AUTH="AUTH";
+		public static final String M_STREAM="STREAM";
+		public static final String M_LOOKUP="LOOKUP";
+		public static final String M_LOGIN="LOGIN";
+		
+		public static enum SvrResponseType{
+			STREAM(M_STREAM),LOOKUP(M_LOOKUP),LOGIN(M_LOGIN),AUTH(M_AUTH),UNKNOWN("");
+			private final String text;
+			private SvrResponseType(String text){ this.text=text; }
+			public String getText(){ return this.text; }
+			public final static SvrResponseType fromString(String text){
+				if(text.equals(M_AUTH))return AUTH;
+				else if(text.equals(M_STREAM))return STREAM;
+				else if(text.equals(M_LOOKUP))return LOOKUP;
+				else if(text.equals(M_LOGIN))return LOGIN;
+				else return UNKNOWN;
+			}
+		}
+		
 		/**
 		 * Request for authentication
 		 * @param cli Abstract client
@@ -232,7 +255,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 		 * @throws IOException
 		 */
 		public static final void AUTH(PacswitchAPI cli,String username,String password,String clienttype) throws IOException{	
-			call(cli,"AUTH",username,password,clienttype);
+			call(cli,M_AUTH,username,password,clienttype);
 		}
 
 		/**
@@ -243,7 +266,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 		 */
 		@Deprecated
 		public static final void STREAM(PacswitchAPI cli,String id) throws IOException{
-			call(cli,"STREAM",id);
+			call(cli,M_STREAM,id);
 		}
 		
 		/**
@@ -253,7 +276,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 		 * @throws IOException
 		 */
 		public static final void LOOKUP(PacswitchAPI cli,String id) throws IOException{
-			call(cli,"LOOKUP",id);
+			call(cli,M_LOOKUP,id);
 		}
 		
 		/**

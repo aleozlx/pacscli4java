@@ -173,16 +173,21 @@ public class PacswitchMessager extends PacswitchClient {
 	 */
 	@Override
 	protected final void onServerResponse(String title, String msg){
-		if(title.equals("LOGIN"))
-			this._isAuthenticated.set(msg.equals("OK")?AuthenticationState.OK:AuthenticationState.Failed);
-		else if(title.equals("LOOKUP")){
-			FutureObject<String> svrres=msgtracker.get("LOOKUP");
+		switch(PacswitchProtocol.SvrResponseType.fromString(title)){
+		case LOGIN:
+			this._isAuthenticated.set(msg.equals(OK)?AuthenticationState.OK:AuthenticationState.Failed);
+			break;
+		case LOOKUP:
+			FutureObject<String> svrres=msgtracker.get(PacswitchProtocol.M_LOOKUP);
 			if(svrres!=null)svrres.set(msg);
-		}
-//		else if(title.equals("STREAM")){
+			break;
+//		case STREAM:
 //			FutureObject<String> svrres=msgtracker.get(SVRRES_STREAM);
 //			if(svrres!=null)svrres.set(msg);
-//		}
+//			break;
+		default:
+			break;	
+		}
 	}
 
 	/**
@@ -240,6 +245,24 @@ public class PacswitchMessager extends PacswitchClient {
 	public final void sendPing(String to){
 		try { MessageProtocol.send(this,MessageProtocol.Type.Ping,to,MessageProtocol.PingReq.getBytes(MessageProtocol.ENC),MessageProtocol.SANSID); } 
 		catch (UnsupportedEncodingException e1) { }
+	}
+	
+	public boolean lookup(String username) {
+		FutureObject<String> mr=new FutureObject<String>();
+		if(this.isAuthenticated()){
+			String requestID=PacswitchProtocol.M_LOOKUP;
+			mr.tag=requestID;
+			msgtracker.put(requestID, mr);
+			try{
+				PacswitchProtocol.LOOKUP(this, username);
+				mr.until(5000);
+				if(mr.isAvailable())return mr.get().equals(OK);
+				else return false;
+			}
+			catch(IOException e){ return false; }
+			finally{ if(mr!=null)this.msgtracker.remove(mr.getTag()); }
+		}
+		else return false;
 	}
 	
 	/**
@@ -411,7 +434,7 @@ public class PacswitchMessager extends PacswitchClient {
 			
 			;
 
-			private byte code;
+			private final byte code;
 			private Type(int code){ this.code=(byte)code; }
 			public final byte getByte(){ return code; }
 			public final byte[] getData(){ return new byte[]{code}; }

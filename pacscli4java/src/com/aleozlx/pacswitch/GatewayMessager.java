@@ -55,7 +55,7 @@ public class GatewayMessager extends PacswitchMessager {
 		if(!ENAllowTracked)return NAK;
 		else if(!ENFilterTracked||filter(from,message)){ 
 			String res=super.handleMessage(from, message);
-			if(res==null){
+			if(!res.equals(ACK)){
 				inbox.pend(from,message); 
 				notifyPendingCounts();
 				onMessageAllowed(from,message);

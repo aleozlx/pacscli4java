@@ -50,6 +50,11 @@ public interface PacswitchAPI{
 	static final String ASCII="ascii";
 	
 	/**
+	 * Constant string "OK"
+	 */
+	static final String OK="OK";
+	
+	/**
 	 * Close the connection permanently.
 	 */
 	void pacClose();
