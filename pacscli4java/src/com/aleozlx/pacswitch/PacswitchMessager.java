@@ -233,7 +233,7 @@ public class PacswitchMessager extends PacswitchClient {
 			public void run(){
 				FutureObject<String> mr=null;
 				try{ 	
-					 mr=new FutureObject<String>();
+					mr=new FutureObject<String>();
 					if(PacswitchMessager.this.isAuthenticated()){
 						String requestID=msgtracker.create(mr);
 						mr.tag=requestID;
@@ -247,14 +247,18 @@ public class PacswitchMessager extends PacswitchClient {
 							PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.AsyncException, args);	
 						}
 					}
-					else throw new PacswitchException("Not authenticated");
+					else PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.InvalidOperation, new IEventListener.Args()); // Not authenticated
 					
-					String res=mr.get(3000);
-					if(res==null)throw new UnreachableException(to,"No response");
-					else return res;
+					String res=mr.get(8500);
+					if(res==null){
+						IEventListener.Args args=new IEventListener.Args();
+						args.put(IEventListener.K_TO, to);
+						args.put(IEventListener.K_MSG, message);
+						PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoResponse, args);
+					}
 				} 
 				finally{
-					if(mr!=null)this.msgtracker.remove(mr.getTag());
+					if(mr!=null)PacswitchMessager.this.msgtracker.remove(mr.getTag());
 				}
 			}
 		};
