@@ -14,7 +14,6 @@ public class FutureObject<V> implements Future<V>{
 	protected boolean _pendingCancellation=false;
 	protected static final int INTERVAL_DEFAULT=50;
 	public String tag="";
-	//protected PacswitchException exception=null;
 
 	public FutureObject(){ initvalue=null; this.reset(); }
 	public FutureObject(V init){ initvalue=init; this.reset(); }
@@ -23,7 +22,6 @@ public class FutureObject<V> implements Future<V>{
 		this._isAvailable=false;
 		this._isCancelled=false;
 		this._pendingCancellation=false;
-		//this.exception=null;
 	}
 
 	@Override
@@ -35,11 +33,6 @@ public class FutureObject<V> implements Future<V>{
 	@Override
 	public V get(){ this.until(); return this.value;}
 	public V get(long timeout){ this.until(timeout); return this._isAvailable?this.value:null; }
-	public V get(long timeout, Exception e) throws Exception{ 
-		this.until(timeout); 
-		if(!this._isAvailable)throw e;
-		else return this.value; 
-	}
 	@Override
 	public V get(long timeout, TimeUnit unit){
 		this.until(unit.convert(timeout,TimeUnit.MILLISECONDS));
@@ -63,8 +56,6 @@ public class FutureObject<V> implements Future<V>{
 	@Override
 	public boolean isCancelled(){return this._isCancelled;}
 	public String getTag(){ return this.tag; }
-	//public PacswitchException getException(){ return this.exception; }
-	//public FutureObject<V> exceptionSugar(PacswitchException e){ this.exception=e; return this; }
 
 	public final void until(int interval, int maxRetry){ 
 		for(int tries=0;tries<maxRetry&&!this._isAvailable&&!this._isCancelled;tries++)Synchronizer.wait(interval); 

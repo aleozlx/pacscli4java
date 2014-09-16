@@ -198,6 +198,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @throws PacswitchException When there is an connection error, server down or receiver absence.
 	 * Refers to the exception message for a specified reason.
 	 */
+	@Deprecated
 	public String send(String to, String message) throws PacswitchException{
 		FutureObject<String> mr=null;
 		try{ 	
@@ -214,16 +215,51 @@ public class PacswitchMessager extends PacswitchClient {
 				}
 			}
 			else throw new PacswitchException("Not authenticated");
-
-			return mr.get(3000,new UnreachableException(to,"No response"));
+			
+			String res=mr.get(3000);
+			if(res==null)throw new UnreachableException(to,"No response");
+			else return res;
 		} 
-		catch (Exception e) {
-			if(e instanceof UnreachableException) throw (UnreachableException)e;
-			else throw new PacswitchException("Exception",e);
-		}
 		finally{
 			if(mr!=null)this.msgtracker.remove(mr.getTag());
 		}
+	}
+	
+	public static final String T_PACSWITCH_SEND="Pacswitch send";
+	
+	public void sendAsync(final String to, final String message){
+		Thread t_send=new Thread(T_PACSWITCH_SEND){
+			@Override
+			public void run(){
+				FutureObject<String> mr=null;
+				try{ 	
+					 mr=new FutureObject<String>();
+					if(PacswitchMessager.this.isAuthenticated()){
+						String requestID=msgtracker.create(mr);
+						mr.tag=requestID;
+						try{
+							if(!MessageProtocol.send(PacswitchMessager.this,MessageProtocol.Type.Request,to,message.getBytes(MessageProtocol.ENC),requestID.getBytes(ASCII)))
+								PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoRouteToServer, new IEventListener.Args());							
+						}
+						catch(UnsupportedEncodingException e){ 
+							IEventListener.Args args=new IEventListener.Args();
+							args.put(IEventListener.K_EXCEPTION, e);
+							PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.AsyncException, args);	
+						}
+					}
+					else throw new PacswitchException("Not authenticated");
+					
+					String res=mr.get(3000);
+					if(res==null)throw new UnreachableException(to,"No response");
+					else return res;
+				} 
+				finally{
+					if(mr!=null)this.msgtracker.remove(mr.getTag());
+				}
+			}
+		};
+		t_send.setDaemon(true);
+		t_send.start();
 	}
 	
 	/**

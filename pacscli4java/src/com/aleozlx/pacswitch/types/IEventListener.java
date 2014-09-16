@@ -6,7 +6,8 @@ public interface IEventListener{
 	public enum Type{
 		Undefined, PingEcho,
 		MessageReceived, SignalReceived, PendingCountChanged,
-		MessageSending, MessageSent, MessageAllowed, MessageBlocked, SignalHandlerMissing
+		MessageSending, MessageSent, MessageAllowed, MessageBlocked, SignalHandlerMissing,
+		NoRouteToServer, NoResponse, InvalidOperation, AsyncException
 	}
 	
 	public static final String K_FROM="from";
@@ -14,6 +15,7 @@ public interface IEventListener{
 	public static final String K_ID="id";
 	public static final String K_DEVICE="device";
 	public static final String K_MSG="message";
+	public static final String K_EXCEPTION="exception";
 	public static final String K_RET="return";
 	
 	public static class Args extends HashMap<String,Object>{

@@ -156,6 +156,7 @@ public class GatewayMessager extends PacswitchMessager {
 		this.sighandlers.remove(id, h);
 	}
 	
+	@Deprecated
 	@Override
 	public String send(String to, String message) throws PacswitchException{
 		onMessageSending(to,message);
