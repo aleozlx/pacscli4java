@@ -9,6 +9,10 @@ public class EventListenerList extends LinkedList<IEventListener> {
 			if(listener.getType().equals(type))listener.run(args);
 	}
 	
+	public void fireEvent(IEventListener.Type type){
+		fireEvent(type,null);
+	}
+	
 	public int countEvent(IEventListener.Type type){
 		int sum=0;
 		for(IEventListener listener:this)

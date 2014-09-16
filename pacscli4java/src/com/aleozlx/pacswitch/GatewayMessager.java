@@ -82,8 +82,7 @@ public class GatewayMessager extends PacswitchMessager {
 	 * counts of pending messages
 	 */
 	public void notifyPendingCounts(){
-		IEventListener.Args args=new IEventListener.Args();
-		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged, args);
+		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged);
 //		new Thread("GM Notifier"){
 //			@Override
 //			public void run(){

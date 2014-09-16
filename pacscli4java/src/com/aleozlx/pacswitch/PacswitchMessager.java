@@ -239,7 +239,7 @@ public class PacswitchMessager extends PacswitchClient {
 						mr.tag=requestID;
 						try{
 							if(!MessageProtocol.send(PacswitchMessager.this,MessageProtocol.Type.Request,to,message.getBytes(MessageProtocol.ENC),requestID.getBytes(ASCII)))
-								PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoRouteToServer, new IEventListener.Args());							
+								PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoRouteToServer);							
 						}
 						catch(UnsupportedEncodingException e){ 
 							IEventListener.Args args=new IEventListener.Args();
@@ -247,7 +247,7 @@ public class PacswitchMessager extends PacswitchClient {
 							PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.AsyncException, args);	
 						}
 					}
-					else PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.InvalidOperation, new IEventListener.Args()); // Not authenticated
+					else PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.InvalidOperation); // Not authenticated
 					
 					String res=mr.get(8500);
 					if(res==null){
