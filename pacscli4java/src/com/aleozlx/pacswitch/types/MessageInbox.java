@@ -10,7 +10,7 @@ public class MessageInbox extends HashMap<String,LinkedList<PendingMessage>> {
 		list.add(new PendingMessage(from, message));
 	}
 	
-	public Map<String,Integer> count(){
+	public synchronized Map<String,Integer> count(){
 		HashMap<String,Integer> r=new HashMap<String,Integer>();
 		for(String key:this.keySet()){
 			LinkedList<PendingMessage> list=get(key);
@@ -24,6 +24,16 @@ public class MessageInbox extends HashMap<String,LinkedList<PendingMessage>> {
 		LinkedList<PendingMessage> list=get(who);
 		if(list!=null)return list.size();
 		else return 0;
+	}
+	
+	@Override
+	public synchronized LinkedList<PendingMessage> put(String key, LinkedList<PendingMessage> value){
+		return super.put(key, value); 
+	}
+	
+	@Override
+	public synchronized LinkedList<PendingMessage> remove(Object key){
+		return super.remove(key);
 	}
 
 }

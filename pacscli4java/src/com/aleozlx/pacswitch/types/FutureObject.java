@@ -8,7 +8,7 @@ import java.util.concurrent.*;
  */
 public class FutureObject<V> implements Future<V>{
 	protected V value=null;
-	private V initvalue=null;
+	private final V initvalue;
 	protected boolean _isAvailable=false;
 	protected boolean _isCancelled=false;
 	protected boolean _pendingCancellation=false;
@@ -46,7 +46,7 @@ public class FutureObject<V> implements Future<V>{
 		}
 	}
 	
-	public synchronized void force(V val){ 
+	public void force(V val){ 
 		this.value=val; 
 	}
 

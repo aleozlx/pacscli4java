@@ -26,6 +26,16 @@ public class FutureTracker<E> extends HashMap<String,FutureObject<E>>{
 		return id;
 	}
 	
+	@Override
+	public synchronized FutureObject<E> put(String key, FutureObject<E> value){
+		return super.put(key, value); 
+	}
+	
+	@Override
+	public synchronized FutureObject<E> remove(Object key){
+		return super.remove(key);
+	}
+	
 	protected final String genID(){
 		String id=null;
 		do{ id = generateID(IDLEN,IDRANGE); }
