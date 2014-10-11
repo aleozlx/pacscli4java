@@ -51,7 +51,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	/**
 	 * Enable auto-reconnection
 	 */
-	public boolean autoReconnect=true;
+	public volatile boolean autoReconnect=true;
 
 	/**
 	 * Flag for the unique receive event loop
