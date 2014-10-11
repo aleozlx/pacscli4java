@@ -1,6 +1,7 @@
 package com.aleozlx.pacswitch;
 import java.io.*;
 import java.net.*;
+
 import com.aleozlx.pacswitch.types.*;
 
 /**
@@ -109,7 +110,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	public static final String SERVER_SIGNATURE="pacswitch";
 
 	@Override
-	public final void pacLoop() throws InterruptedException{
+	public final void pacLoop(){
 		byte[] _mybuffer=new byte[2048]; int sz_mybuffer,iI,iII,iIII;
 		this.loopStarted=true;
 		do{
@@ -146,7 +147,8 @@ public abstract class PacswitchClient implements PacswitchAPI {
 				else sz_mybuffer=0;
 			}
 			catch(IOException e){ 
-				Thread.sleep(600); 
+				try { Thread.sleep(600); } 
+				catch (InterruptedException e1) { } 
 				if(!reconnect()) break;
 			}
 		} while(true);
@@ -161,10 +163,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 		if(!this.loopStarted){
 			new Thread(T_PACSWITCH_RECV){
 				@Override
-				public void run(){
-					try{ pacLoop(); }
-					catch(InterruptedException e){ this.interrupt(); }
-				}
+				public void run(){ pacLoop(); }
 			}.start();
 		}
 	}
@@ -181,7 +180,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	 * @param title Server response title
 	 * @param msg Server response message
 	 */
-	protected abstract  void onServerResponse(String title, String msg);
+	protected abstract void onServerResponse(String title, String msg);
 
 	/**
 	 * Close the connection permanently.
@@ -231,9 +230,14 @@ public abstract class PacswitchClient implements PacswitchAPI {
 		public static final String M_STREAM="STREAM";
 		public static final String M_LOOKUP="LOOKUP";
 		public static final String M_LOGIN="LOGIN";
-		
+		public static final String M_POINTER="POINTER";
+		public static final String M_REGISTER="REGISTER";
+		public static final String M_TEST="TEST";
+		public static final String M_PASSWD="PASSWD";
+
 		public static enum SvrResponseType{
-			STREAM(M_STREAM),LOOKUP(M_LOOKUP),LOGIN(M_LOGIN),AUTH(M_AUTH),UNKNOWN("");
+			STREAM(M_STREAM),LOOKUP(M_LOOKUP),LOGIN(M_LOGIN),AUTH(M_AUTH),TEST(M_TEST),
+			REGISTER(M_REGISTER),PASSWD(M_PASSWD),POINTER(M_POINTER),UNKNOWN("");
 			private final String text;
 			private SvrResponseType(String text){ this.text=text; }
 			public String getText(){ return this.text; }
@@ -242,6 +246,10 @@ public abstract class PacswitchClient implements PacswitchAPI {
 				else if(text.equals(M_STREAM))return STREAM;
 				else if(text.equals(M_LOOKUP))return LOOKUP;
 				else if(text.equals(M_LOGIN))return LOGIN;
+				else if(text.equals(M_TEST))return TEST;
+				else if(text.equals(M_REGISTER))return REGISTER;
+				else if(text.equals(M_PASSWD))return PASSWD;
+				else if(text.equals(M_POINTER))return POINTER;
 				else return UNKNOWN;
 			}
 		}

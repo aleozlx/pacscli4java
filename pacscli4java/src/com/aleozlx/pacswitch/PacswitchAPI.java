@@ -76,9 +76,8 @@ public interface PacswitchAPI{
 	
 	/**
 	 * Start the event loop for response data.
-	 * @throws InterruptedException
 	 */
-	void pacLoop() throws InterruptedException;
+	void pacLoop();
 	
 	/**
 	 * Send user data, which will be automatically wrapped in a packet.
