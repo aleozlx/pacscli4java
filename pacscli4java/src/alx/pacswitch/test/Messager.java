@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch.test;
+package alx.pacswitch.test;
 //import java.awt.Toolkit;
 //import java.awt.datatransfer.StringSelection;
 import java.io.UnsupportedEncodingException;
@@ -8,8 +8,10 @@ import java.util.Date;
 //import javax.swing.SwingUtilities;
 
 
-import com.aleozlx.pacswitch.GatewayMessager;
-import com.aleozlx.pacswitch.types.IEventListener;
+
+
+import alx.pacswitch.GatewayMessager;
+import alx.pacswitch.types.IEventListener;
 
 public class Messager extends GatewayMessager{
 	public static final String HOST="222.69.93.107";

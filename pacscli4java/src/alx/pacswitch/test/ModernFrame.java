@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch.test;
+package alx.pacswitch.test;
 
 import javax.swing.*;
 import java.awt.*;

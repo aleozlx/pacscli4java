@@ -1,5 +1,7 @@
-package com.aleozlx.pacswitch.types;
+package alx.pacswitch.types;
 import java.util.concurrent.*;
+
+import alx.utils.Synchronizer;
 
 /**
  * FutureObject
@@ -62,6 +64,7 @@ public class FutureObject<V> implements Future<V>{
 	}
 	public final void until(long timeout){ this.until(INTERVAL_DEFAULT,(int)(timeout/INTERVAL_DEFAULT)); }
 	public final void until(){ while(!this._isAvailable)Synchronizer.wait(INTERVAL_DEFAULT); }
+	//TODO consider wait() & notify() for message tracking - `wait` `sleep` `until`
 
 	public final boolean valueEquals(V val){
 		if(val==null)return this._isAvailable&&this.value==null;

@@ -1,8 +1,9 @@
-package com.aleozlx.pacswitch;
+package alx.pacswitch;
 import java.io.*;
 import java.net.*;
 
-import com.aleozlx.pacswitch.types.*;
+import alx.pacswitch.types.*;
+import alx.utils.Synchronizer;
 
 /**
  * Pacswitch client implementation<br/><br/>
@@ -14,10 +15,12 @@ import com.aleozlx.pacswitch.types.*;
  * <a href="https://github.com/aleozlx/pacswitch">https://github.com/aleozlx/pacswitch</a><br/>
  * 
  * @author Alex
- * @version 1.3.1
+ * @version 1.3.2
  * @since June 3, 2014
  */
 public abstract class PacswitchClient implements PacswitchAPI {
+	public static final int MAX_SEND_TRIES = 3;
+
 	/**
 	 * Port
 	 */
@@ -26,7 +29,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	/**
 	 * Data buffer
 	 */
-	protected Mybuffer mybuffer=new Mybuffer();
+	protected Pacbuffer mybuffer=new Pacbuffer();
 
 	/**
 	 * User ID
@@ -100,7 +103,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 
 	@Override
 	public final boolean pacSendData(String recv,byte[] ... buffer) {
-		for(int tries=0;tries<3;tries++){
+		for(int tries=0;tries<MAX_SEND_TRIES;tries++){
 			try{ PacswitchProtocol.data(this,recv,buffer); return true; }
 			catch(IOException e){ Synchronizer.wait(2000); }
 		}
@@ -140,7 +143,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 				InputStream is=socket.getInputStream();
 				sz_mybuffer=is.read(_mybuffer);
 				if(sz_mybuffer<=0)throw new IOException("Connection lost");
-				else if(sz_mybuffer>0&&sz_mybuffer+mybuffer.size<Mybuffer.SZ_BUFFER-1){
+				else if(sz_mybuffer>0&&sz_mybuffer+mybuffer.size<Pacbuffer.SZ_BUFFER-1){
 					System.arraycopy(_mybuffer,0,mybuffer.buffer,mybuffer.size,sz_mybuffer);
 					mybuffer.size+=sz_mybuffer;
 				}

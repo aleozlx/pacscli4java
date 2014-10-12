@@ -1,8 +1,8 @@
-package com.aleozlx.pacswitch;
+package alx.pacswitch;
 
 import java.util.*;
 
-import com.aleozlx.pacswitch.types.*;
+import alx.pacswitch.types.*;
 
 /**
  * GatewayMessager

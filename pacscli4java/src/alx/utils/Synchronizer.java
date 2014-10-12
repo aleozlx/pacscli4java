@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch.types;
+package alx.utils;
 
 /**
  * Synchronizer

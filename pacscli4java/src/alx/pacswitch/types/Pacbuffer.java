@@ -1,10 +1,10 @@
-package com.aleozlx.pacswitch.types;
+package alx.pacswitch.types;
 
 /**
  * Data buffer for PacswitchClient
  * @author Alex
  */
-public class Mybuffer{
+public class Pacbuffer{
 	/**
 	 * Buffer size
 	 */

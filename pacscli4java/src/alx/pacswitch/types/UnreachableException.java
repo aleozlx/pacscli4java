@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch.types;
+package alx.pacswitch.types;
 
 public class UnreachableException extends PacswitchException {
 	private static final long serialVersionUID = 1L;

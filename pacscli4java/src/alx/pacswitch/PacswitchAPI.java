@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch;
+package alx.pacswitch;
 
 import java.net.Socket;
 

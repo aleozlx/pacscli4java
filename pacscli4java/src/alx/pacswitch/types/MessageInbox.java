@@ -1,4 +1,4 @@
-package com.aleozlx.pacswitch.types;
+package alx.pacswitch.types;
 import java.util.*;
 
 public class MessageInbox extends HashMap<String,LinkedList<PendingMessage>> {

@@ -1,8 +1,8 @@
-package com.aleozlx.pacswitch;
+package alx.pacswitch;
 import java.util.*;
 import java.io.*;
 
-import com.aleozlx.pacswitch.types.*;
+import alx.pacswitch.types.*;
 
 /**
  * Message protocol based on paswitch protocol
@@ -16,7 +16,7 @@ import com.aleozlx.pacswitch.types.*;
  * <a href="https://github.com/aleozlx/pacswitch">https://github.com/aleozlx/pacswitch</a><br/>
  * 
  * @author Alex
- * @version 1.3.1
+ * @version 1.3.2
  * @since June 27, 2014
  */
 public class PacswitchMessager extends PacswitchClient {
@@ -196,7 +196,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @param message Message content
 	 * @return Response from other side
 	 * @throws PacswitchException When there is an connection error, server down or receiver absence.
-	 * Refers to the exception message for a specified reason.
+	 * Refer to the exception message for a specified reason.
 	 */
 	@Deprecated
 	public String send(String to, String message) throws PacswitchException{

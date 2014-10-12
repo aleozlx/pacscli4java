@@ -1,9 +1,11 @@
-package com.aleozlx.pacswitch.test;
+package alx.pacswitch.test;
 
 import java.awt.Rectangle;
 import java.awt.event.*;
+
 import javax.swing.*;
-import com.aleozlx.pacswitch.types.*;
+
+import alx.pacswitch.types.*;
 
 public class TextViewWindow extends ModernFrame implements ISignalHandler {
 	private static final long serialVersionUID = 1L;

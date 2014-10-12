@@ -1,12 +1,14 @@
-package com.aleozlx.pacswitch.test;
+package alx.pacswitch.test;
 
 import java.awt.Toolkit;
 import java.awt.datatransfer.*;
 import java.awt.event.*;
 import java.io.*;
 import java.util.*;
+
 import javax.swing.*;
-import com.aleozlx.pacswitch.types.*;
+
+import alx.pacswitch.types.*;
 
 public class CommWindow extends ModernFrame {
 	private static final long serialVersionUID = 1L;
