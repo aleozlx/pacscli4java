@@ -7,6 +7,7 @@ import alx.utils.Synchronizer;
  * FutureObject
  * @author Alex
  * @since July 3, 2014
+ * [Concurrent]
  */
 public class FutureObject<V> implements Future<V>{
 	protected V value=null;
