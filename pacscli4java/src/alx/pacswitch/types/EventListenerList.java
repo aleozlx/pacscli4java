@@ -1,12 +1,12 @@
 package alx.pacswitch.types;
 
-import java.util.LinkedList;
+import java.util.*;
 
-public class EventListenerList extends LinkedList<IEventListener> {
+public class EventListenerList extends HashMap<IEventListener.Type,LinkedList<IEventListener>> {
 	private static final long serialVersionUID = 1L;
 	public synchronized void fireEvent(IEventListener.Type type,IEventListener.Args args){
-		for(IEventListener listener:this)
-			if(listener.getType().equals(type))listener.run(args);
+		LinkedList<IEventListener> elist=get(type);
+		if(elist!=null) for(IEventListener listener:elist) listener.run(args);
 	}
 	
 	public void fireEvent(IEventListener.Type type){
@@ -14,19 +14,22 @@ public class EventListenerList extends LinkedList<IEventListener> {
 	}
 	
 	public synchronized int countEvent(IEventListener.Type type){
-		int sum=0;
-		for(IEventListener listener:this)
-			if(listener.getType().equals(type))sum++;
-		return sum;
+		LinkedList<IEventListener> elist=get(type);
+		if(elist!=null)return elist.size();
+		else return 0;
 	}
 	
-	@Override
-	public synchronized boolean add(IEventListener e){
-		return super.add(e);
+	public synchronized void add(IEventListener e){
+		IEventListener.Type type=e.getType();
+		if(!containsKey(type)){
+			LinkedList<IEventListener> elist=new LinkedList<IEventListener>();
+			elist.add(e);
+			put(type,elist);
+		}
 	}
 	
-	@Override
-	public synchronized boolean remove(Object e){
-		return super.remove(e);
+	public synchronized void remove(IEventListener e){
+		LinkedList<IEventListener> elist=get(e.getType());
+		if(elist!=null)elist.remove(e);
 	}
 }

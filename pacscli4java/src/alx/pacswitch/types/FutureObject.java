@@ -67,6 +67,36 @@ public class FutureObject<V> implements Future<V>{
 	public final void until(){ while(!this._isAvailable)Synchronizer.wait(INTERVAL_DEFAULT); }
 	//TODO consider wait() & notify() for message tracking - `wait` `sleep` `until`
 
+	
+	/* TODO 
+indefinite wait:
+pacswitch/PacswitchMessager.java:			_isAuthenticated.until(3000);
+pacswitch/PacswitchMessager.java:				mr.until(5000);
+pacswitch/types/FutureObject.java:	public V get(){ this.until(); return this.value;}
+pacswitch/types/FutureObject.java:	public V get(long timeout){ this.until(timeout); return this._isAvailable?this.value:null; }
+pacswitch/types/FutureObject.java:		this.until(unit.convert(timeout,TimeUnit.MILLISECONDS));
+pacswitch/types/FutureObject.java:	public final void until(int interval, int maxRetry){ 
+pacswitch/types/FutureObject.java:		for(int tries=0;tries<maxRetry&&!this._isAvailable&&!this._isCancelled;tries++)Synchronizer.wait(interval); 
+pacswitch/types/FutureObject.java:	public final void until(long timeout){ this.until(INTERVAL_DEFAULT,(int)(timeout/INTERVAL_DEFAULT)); }
+pacswitch/types/FutureObject.java:	public final void until(){ while(!this._isAvailable)Synchronizer.wait(INTERVAL_DEFAULT); }
+
+thread pool:
+pacswitch/test/CommWindow.java:			new Thread("SendAsync"){
+pacswitch/PacswitchMessager.java:		Thread t_send=new Thread(T_PACSWITCH_SEND){
+pacswitch/GatewayMessager.java://		new Thread("GM Notifier"){
+pacswitch/GatewayMessager.java:		new Thread("GM SigDispatcher"){
+
+pacswitch/PacswitchClient.java:			catch(IOException e){ Synchronizer.wait(800); }
+pacswitch/PacswitchClient.java:			catch(IOException e){ Synchronizer.wait(2000); }
+pacswitch/PacswitchClient.java:				try { Thread.sleep(600); } 
+utils/Synchronizer.java:	public static final void wait(int ms){
+utils/Synchronizer.java:		try{ Thread.sleep(ms); }
+pacswitch/PacswitchClient.java:				try { Thread.sleep(600); } 
+utils/Synchronizer.java:		try{ Thread.sleep(ms); }
+utils/Synchronizer.java:		catch(InterruptedException e){ Thread.currentThread().interrupt(); }
+pacswitch/PacswitchClient.java:			new Thread(T_PACSWITCH_RECV){
+	 * */
+	
 	public final boolean valueEquals(V val){
 		if(val==null)return this._isAvailable&&this.value==null;
 		else return this._isAvailable&&this.value!=null&&this.value.equals(val);

@@ -19,22 +19,8 @@ public interface IEventListener{
 	
 	public static class Args extends HashMap<String,Object>{
 		private static final long serialVersionUID = 1L;
-		
-//		public Args(Object ... params){
-//			int i=0;
-//			while(i<params.length){
-//				String key=(String)params[i++];
-//				Object val=params[i++];
-//				this.put(key,val);
-//			}				
-//		}
-		
-		public void ret(Object r){
-			this.put(K_RET, r);
-		}
-		public Object getRet(){
-			return this.get(K_RET);
-		}
+		public void ret(Object r){ this.put(K_RET, r); }
+		public Object getRet(){ return this.get(K_RET); }
 	}
 	
 	Type getType();
