@@ -1,5 +1,4 @@
 package alx.pacswitch.types;
-
 public class PacswitchException extends Exception {
 	private static final long serialVersionUID = 1L;
 	public PacswitchException(){ super(); }

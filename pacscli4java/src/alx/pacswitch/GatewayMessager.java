@@ -3,9 +3,12 @@ package alx.pacswitch;
 import java.util.*;
 import java.util.concurrent.*;
 
-import alx.pacswitch.types.*;
-import alx.utils.Dynamic;
-
+import alx.pacswitch.types.ISignalHandler;
+import alx.pacswitch.types.MessageInbox;
+import alx.pacswitch.types.IEventListener;
+import alx.pacswitch.types.EventArgs;
+import alx.pacswitch.types.EventArgs.K;
+import alx.pacswitch.types.PacswitchException;
 /**
  * GatewayMessager
  * @author Alex
@@ -83,7 +86,7 @@ public class GatewayMessager extends PacswitchMessager {
 	 * Asynchronously notify all tracked messages handlers of change of 
 	 * counts of pending messages
 	 */
-	protected void notifyPendingCounts(){
+	public void notifyPendingCounts(){
 		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged);	
 	}
 	
@@ -189,9 +192,9 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onMessageSending(String to,String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_TO, to);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.TO, to);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageSending, args);
 	}
 	
@@ -201,9 +204,9 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onMessageSent(String to,String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_TO, to);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.TO, to);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageSent, args);
 	}
 	
@@ -213,9 +216,9 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onMessageBlocked(String from,String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_FROM, from);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.FROM, from);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageBlocked, args);
 	}
 	
@@ -225,9 +228,9 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onMessageAllowed(String from,String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_FROM, from);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.FROM, from);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageAllowed, args);
 	}
 	
@@ -242,10 +245,10 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onSignalHandlerMissing(String from,String id,String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_FROM, from);
-		args.put(IEventListener.K_ID, id);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.FROM, from);
+		args.put(K.ID, id);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.SignalHandlerMissing, args);
 	}
 	

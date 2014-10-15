@@ -5,8 +5,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.io.*;
 
-import alx.pacswitch.types.*;
-import alx.utils.Dynamic;
+import alx.pacswitch.types.EventArgs;
+import alx.pacswitch.types.EventArgs.K;
+import alx.pacswitch.types.EventListeners;
+import alx.pacswitch.types.IEventListener;
+import alx.pacswitch.types.PacswitchException;
+import alx.pacswitch.types.Tracked;
+import alx.pacswitch.types.Tracker;
+import alx.pacswitch.types.UnreachableException;
 
 /**
  * Message protocol based on paswitch protocol
@@ -162,10 +168,10 @@ public class PacswitchMessager extends PacswitchClient {
 				this.sendPing(sender, response);
 			}
 			else{
-				Dynamic args=new Dynamic();
+				EventArgs args=new EventArgs();
 				String[] from_dev=message.split("\t");
-				args.put(IEventListener.K_FROM, from_dev[0]);
-				args.put(IEventListener.K_DEVICE, from_dev[1]);
+				args.put(K.FROM, from_dev[0]);
+				args.put(K.DEVICE, from_dev[1]);
 				this.listeners.fireEvent(IEventListener.Type.PingEcho, args);
 			}
 			break;
@@ -181,8 +187,8 @@ public class PacswitchMessager extends PacswitchClient {
 	protected final void onServerResponse(String title, String msg){
 		switch(PacswitchProtocol.SvrResponseType.fromString(title)){
 		case LOGIN:
-			Dynamic args_login=new Dynamic();
-			args_login.put(IEventListener.K_RESULT, msg.equals(OK));
+			EventArgs args_login=new EventArgs();
+			args_login.put(K.RESULT, msg.equals(OK));
 			this.listeners.fireEvent(IEventListener.Type.AuthenticationEvent, args_login);
 			this._isAuthenticated.set(msg.equals(OK)?AuthenticationState.OK:AuthenticationState.Failed);
 			break;
@@ -253,8 +259,8 @@ public class PacswitchMessager extends PacswitchClient {
 							}							
 						}
 						catch(UnsupportedEncodingException e){ 
-							Dynamic args=new Dynamic();
-							args.put(IEventListener.K_EXCEPTION, e);
+							EventArgs args=new EventArgs();
+							args.put(K.EXCEPTION, e);
 							PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.AsyncException, args);
 							return;
 						}
@@ -266,16 +272,16 @@ public class PacswitchMessager extends PacswitchClient {
 					
 					String res=mr.get(8500);
 					if(res==null){
-						Dynamic args=new Dynamic();
-						args.put(IEventListener.K_TO, to);
-						args.put(IEventListener.K_MSG, message);
+						EventArgs args=new EventArgs();
+						args.put(K.TO, to);
+						args.put(K.MSG, message);
 						PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoResponse, args);
 						return;
 					}
 					else{
-						Dynamic args=new Dynamic();
-						args.put(IEventListener.K_TO, to);
-						args.put(IEventListener.K_MSG, message);
+						EventArgs args=new EventArgs();
+						args.put(K.TO, to);
+						args.put(K.MSG, message);
 						PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.MessageSent, args);
 					}
 				} 
@@ -335,8 +341,8 @@ public class PacswitchMessager extends PacswitchClient {
 	public void lookupAsync(final String username,final IEventListener callback){
 		sendingPool.execute(new Runnable(){
 			private void ret(Boolean r){
-				Dynamic args=new Dynamic();
-				args.put(IEventListener.K_RESULT, r);
+				EventArgs args=new EventArgs();
+				args.put(K.RESULT, r);
 				callback.run(args);
 			}
 			
@@ -393,9 +399,9 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @return Response to the message
 	 */
 	protected String handleMessage(String from, String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_FROM, from);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.FROM, from);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageReceived, args);
 		Object ret=args.getRet();
 		if(ret instanceof String)return (String)ret;
@@ -409,10 +415,10 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @param message
 	 */
 	protected void handleSignal(String from,String id, String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_FROM, from);
-		args.put(IEventListener.K_ID, id);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.FROM, from);
+		args.put(K.ID, id);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.SignalReceived, args);
 	}
 	
@@ -422,9 +428,9 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @param message
 	 */
 	protected void handleSignal(String from, String message){
-		Dynamic args=new Dynamic();
-		args.put(IEventListener.K_FROM, from);
-		args.put(IEventListener.K_MSG, message);
+		EventArgs args=new EventArgs();
+		args.put(K.FROM, from);
+		args.put(K.MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.SignalReceived, args);
 	}
 	
