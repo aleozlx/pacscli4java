@@ -11,9 +11,10 @@ import java.util.Date;
 
 
 
+
 import alx.pacswitch.GatewayMessager;
-import alx.pacswitch.types.Dynamic;
 import alx.pacswitch.types.IEventListener;
+import alx.utils.Dynamic;
 
 public class Messager extends GatewayMessager{
 	public static final String HOST="222.69.93.107";

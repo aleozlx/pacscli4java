@@ -6,6 +6,7 @@ import java.util.concurrent.Executors;
 import java.io.*;
 
 import alx.pacswitch.types.*;
+import alx.utils.Dynamic;
 
 /**
  * Message protocol based on paswitch protocol
@@ -314,7 +315,6 @@ public class PacswitchMessager extends PacswitchClient {
 	
 	@Deprecated
 	public boolean lookup(String username) {
-		// TODO implement lookupAsync using callback
 		Tracked<String> mr=new Tracked<String>();
 		if(this.isAuthenticated()){
 			String requestID=PacswitchProtocol.M_LOOKUP;
@@ -330,6 +330,35 @@ public class PacswitchMessager extends PacswitchClient {
 			finally{ if(mr!=null)this.msgtracker.remove(mr.tag); }
 		}
 		else return false;
+	}
+	
+	public void lookupAsync(final String username,final IEventListener callback){
+		sendingPool.execute(new Runnable(){
+			private void ret(Boolean r){
+				Dynamic args=new Dynamic();
+				args.put(IEventListener.K_RESULT, r);
+				callback.run(args);
+			}
+			
+			@Override
+			public void run() {
+				Tracked<String> mr=new Tracked<String>();
+				if(isAuthenticated()){
+					String requestID=PacswitchProtocol.M_LOOKUP;
+					mr.tag=requestID;
+					msgtracker.put(requestID, mr);
+					try{
+						PacswitchProtocol.LOOKUP(PacswitchMessager.this, username);
+						String res=mr.get(5000);
+						if(res!=null)this.ret(res.equals(OK));
+						else this.ret(false);
+					}
+					catch(IOException e){ this.ret(false); }
+					finally{ if(mr!=null)msgtracker.remove(mr.tag); }
+				}
+				else this.ret(false);
+			}
+		});
 	}
 	
 	/**

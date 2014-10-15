@@ -2,6 +2,8 @@ package alx.pacswitch.types;
 
 import java.util.*;
 
+import alx.utils.Dynamic;
+
 public class EventListeners extends HashMap<IEventListener.Type,LinkedList<IEventListener>> {
 	private static final long serialVersionUID = 1L;
 	public synchronized void fireEvent(IEventListener.Type type,Dynamic args){

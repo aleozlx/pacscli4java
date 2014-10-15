@@ -1,5 +1,7 @@
 package alx.pacswitch.types;
 
+import alx.utils.Dynamic;
+
 public interface IEventListener{
 	public enum Type{
 		Undefined, PingEcho, AuthenticationEvent,
@@ -15,7 +17,6 @@ public interface IEventListener{
 	public static final String K_MSG="message";
 	public static final String K_RESULT="result";
 	public static final String K_EXCEPTION="exception";
-	public static final String K_RET="return";
 	
 	Type getType();
 	void run(Dynamic args);

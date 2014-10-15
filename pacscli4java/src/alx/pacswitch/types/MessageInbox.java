@@ -1,6 +1,8 @@
 package alx.pacswitch.types;
 import java.util.*;
 
+import alx.utils.Dynamic;
+
 public class MessageInbox extends HashMap<String,LinkedList<Dynamic>> {
 	private static final long serialVersionUID = 1L;
 	public static final String K_FROM="from";

@@ -2,7 +2,9 @@ package alx.pacswitch;
 
 import java.util.*;
 import java.util.concurrent.*;
+
 import alx.pacswitch.types.*;
+import alx.utils.Dynamic;
 
 /**
  * GatewayMessager
@@ -81,7 +83,7 @@ public class GatewayMessager extends PacswitchMessager {
 	 * Asynchronously notify all tracked messages handlers of change of 
 	 * counts of pending messages
 	 */
-	public void notifyPendingCounts(){
+	protected void notifyPendingCounts(){
 		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged);	
 	}
 	

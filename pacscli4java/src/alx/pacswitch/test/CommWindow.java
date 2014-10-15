@@ -9,6 +9,7 @@ import java.util.*;
 import javax.swing.*;
 
 import alx.pacswitch.types.*;
+import alx.utils.Dynamic;
 
 public class CommWindow extends ModernFrame {
 	private static final long serialVersionUID = 1L;
