@@ -1,18 +1,19 @@
 package alx.pacswitch.types;
 
-import java.util.*;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class FutureTracker<E> extends HashMap<String,FutureObject<E>>{
+public class Tracker<E> extends ConcurrentHashMap<String,Tracked<E>>{
 	private static final long serialVersionUID = 1L;
 	protected final int IDLEN;
 	protected final char[] IDRANGE;
-	public FutureTracker(int idlen,char[] range){
+	public Tracker(int idlen,char[] range){
 		IDLEN=idlen;
 		IDRANGE=range;
 	}
 	
 	public final boolean set(String id,E val){
-		FutureObject<E> r=get(id);
+		Tracked<E> r=get(id);
 		if(r!=null){
 			r.set(val);
 			return true;
@@ -20,20 +21,10 @@ public class FutureTracker<E> extends HashMap<String,FutureObject<E>>{
 		else return false;
 	}
 	
-	public final String create(FutureObject<E> fo){
+	public final String create(Tracked<E> fo){
 		String id=genID();
 		put(id,fo);
 		return id;
-	}
-	
-	@Override
-	public synchronized FutureObject<E> put(String key, FutureObject<E> value){
-		return super.put(key, value); 
-	}
-	
-	@Override
-	public synchronized FutureObject<E> remove(Object key){
-		return super.remove(key);
 	}
 	
 	protected final String genID(){

@@ -3,7 +3,6 @@ import java.io.*;
 import java.net.*;
 
 import alx.pacswitch.types.*;
-import alx.utils.Synchronizer;
 
 /**
  * Pacswitch client implementation<br/><br/>
@@ -29,7 +28,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	/**
 	 * Data buffer
 	 */
-	protected Pacbuffer mybuffer=new Pacbuffer();
+	protected ProtocolBuffer mybuffer=new ProtocolBuffer();
 
 	/**
 	 * User ID
@@ -96,7 +95,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 				PacswitchProtocol.AUTH(this,user,password,clienttype);
 				return true;
 			}
-			catch(IOException e){ Synchronizer.wait(800); }
+			catch(IOException e){ wait(800); }
 		}
 		return false;
 	} 
@@ -105,7 +104,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 	public final boolean pacSendData(String recv,byte[] ... buffer) {
 		for(int tries=0;tries<MAX_SEND_TRIES;tries++){
 			try{ PacswitchProtocol.data(this,recv,buffer); return true; }
-			catch(IOException e){ Synchronizer.wait(2000); }
+			catch(IOException e){ wait(2000); }
 		}
 		return false;
 	}
@@ -143,7 +142,7 @@ public abstract class PacswitchClient implements PacswitchAPI {
 				InputStream is=socket.getInputStream();
 				sz_mybuffer=is.read(_mybuffer);
 				if(sz_mybuffer<=0)throw new IOException("Connection lost");
-				else if(sz_mybuffer>0&&sz_mybuffer+mybuffer.size<Pacbuffer.SZ_BUFFER-1){
+				else if(sz_mybuffer>0&&sz_mybuffer+mybuffer.size<ProtocolBuffer.SZ_BUFFER-1){
 					System.arraycopy(_mybuffer,0,mybuffer.buffer,mybuffer.size,sz_mybuffer);
 					mybuffer.size+=sz_mybuffer;
 				}
@@ -213,17 +212,46 @@ public abstract class PacswitchClient implements PacswitchAPI {
 
 	/**
 	 * Send a package start sequence.
-	 * This is not actually implemented since it's both inefficient and unnecessary.
+	 * This is deprecated since it's both inefficient and unnecessary.
 	 */
 	@Override @Deprecated
-	public void pacStart(String recv){ throw new Error(); }
+	public void pacStart(String recv){
+		Socket s=getSocket();
+		synchronized(s){
+			OutputStream os;
+			try {
+				os = s.getOutputStream();
+				os.write(PACKAGE_START);
+			} 
+			catch (IOException e) { } 
+		}
+	}
 
 	/**
 	 * Send a package end sequence.
-	 * This is not actually implemented since it's both inefficient and unnecessary.
+	 * This is deprecated since it's both inefficient and unnecessary.
 	 */
 	@Override @Deprecated
-	public void pacEnd(){ throw new Error(); }
+	public void pacEnd(){
+		Socket s=getSocket();
+		synchronized(s){
+			OutputStream os;
+			try {
+				os = s.getOutputStream();
+				os.write(PACKAGE_END);
+			} 
+			catch (IOException e) { } 
+		}
+	}
+	
+	/**
+	 * Wait for some milliseconds
+	 * @param ms A specific time
+	 */
+	public static final void wait(int ms){
+		try{ Thread.sleep(ms); }
+		catch(InterruptedException e){ Thread.currentThread().interrupt(); }
+	}
 	
 	/**
 	 * Pacswitch protocol implementation

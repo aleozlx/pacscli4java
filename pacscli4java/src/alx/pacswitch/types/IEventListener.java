@@ -1,9 +1,8 @@
 package alx.pacswitch.types;
-import java.util.*;
 
 public interface IEventListener{
 	public enum Type{
-		Undefined, PingEcho,
+		Undefined, PingEcho, AuthenticationEvent,
 		MessageReceived, SignalReceived, PendingCountChanged,
 		MessageSending, MessageSent, MessageAllowed, MessageBlocked, SignalHandlerMissing,
 		NoRouteToServer, NoResponse, InvalidOperation, AsyncException
@@ -14,15 +13,10 @@ public interface IEventListener{
 	public static final String K_ID="id";
 	public static final String K_DEVICE="device";
 	public static final String K_MSG="message";
+	public static final String K_RESULT="result";
 	public static final String K_EXCEPTION="exception";
 	public static final String K_RET="return";
 	
-	public static class Args extends HashMap<String,Object>{
-		private static final long serialVersionUID = 1L;
-		public void ret(Object r){ this.put(K_RET, r); }
-		public Object getRet(){ return this.get(K_RET); }
-	}
-	
 	Type getType();
-	void run(Args args);
+	void run(Dynamic args);
 }

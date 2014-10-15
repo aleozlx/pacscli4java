@@ -1,5 +1,8 @@
 package alx.pacswitch;
+
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.io.*;
 
 import alx.pacswitch.types.*;
@@ -25,7 +28,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * FutureObject tracker with ID format specifications
 	 * @param <E> Element type being mapped from a String.
 	 */
-	protected static final class Tracker<E> extends FutureTracker<E>{
+	protected static final class MessageTracker<E> extends Tracker<E>{
 		private static final long serialVersionUID = 1L;
 		
 		/**
@@ -36,16 +39,16 @@ public class PacswitchMessager extends PacswitchClient {
 		/**
 		 * Constructor
 		 */
-		public Tracker() { super(MessageProtocol.RIDLEN,RIDRANGE); }	
+		public MessageTracker() { super(MessageProtocol.RIDLEN,RIDRANGE); }	
 	}
 
 	static enum AuthenticationState{ Unconnected, Pending, OK, Failed; }
-	FutureObject<AuthenticationState> _isAuthenticated=new FutureObject<AuthenticationState>(AuthenticationState.Unconnected);
+	Tracked<AuthenticationState> _isAuthenticated=new Tracked<AuthenticationState>(AuthenticationState.Unconnected);
 	
 	/**
 	 * Request/response mapping
 	 */
-	protected FutureTracker<String> msgtracker=new Tracker<String>();
+	protected Tracker<String> msgtracker=new MessageTracker<String>();
 
 	/**
 	 * Device name
@@ -76,11 +79,13 @@ public class PacswitchMessager extends PacswitchClient {
 	 * Authentication state.
 	 * @return msg Authentication state
 	 */
-	public final boolean isAuthenticated(){ 
-		if(_isAuthenticated.valueEquals(AuthenticationState.Unconnected))return false;
+	public final boolean isAuthenticated(){
+		if(_isAuthenticated.getValueNow().equals(AuthenticationState.Unconnected))
+			return false;
 		else{
-			_isAuthenticated.until(3000);
-			return _isAuthenticated.valueEquals(AuthenticationState.OK);
+			AuthenticationState s=_isAuthenticated.get(3000);
+			if(s!=null)return s.equals(AuthenticationState.OK);
+			else return false;
 		}
 	}
 
@@ -156,7 +161,7 @@ public class PacswitchMessager extends PacswitchClient {
 				this.sendPing(sender, response);
 			}
 			else{
-				IEventListener.Args args=new IEventListener.Args();
+				Dynamic args=new Dynamic();
 				String[] from_dev=message.split("\t");
 				args.put(IEventListener.K_FROM, from_dev[0]);
 				args.put(IEventListener.K_DEVICE, from_dev[1]);
@@ -175,10 +180,13 @@ public class PacswitchMessager extends PacswitchClient {
 	protected final void onServerResponse(String title, String msg){
 		switch(PacswitchProtocol.SvrResponseType.fromString(title)){
 		case LOGIN:
+			Dynamic args_login=new Dynamic();
+			args_login.put(IEventListener.K_RESULT, msg.equals(OK));
+			this.listeners.fireEvent(IEventListener.Type.AuthenticationEvent, args_login);
 			this._isAuthenticated.set(msg.equals(OK)?AuthenticationState.OK:AuthenticationState.Failed);
 			break;
 		case LOOKUP:
-			FutureObject<String> svrres=msgtracker.get(PacswitchProtocol.M_LOOKUP);
+			Tracked<String> svrres=msgtracker.get(PacswitchProtocol.M_LOOKUP);
 			if(svrres!=null)svrres.set(msg);
 			break;
 //		case STREAM:
@@ -200,9 +208,9 @@ public class PacswitchMessager extends PacswitchClient {
 	 */
 	@Deprecated
 	public String send(String to, String message) throws PacswitchException{
-		FutureObject<String> mr=null;
+		Tracked<String> mr=null;
 		try{ 	
-			 mr=new FutureObject<String>();
+			 mr=new Tracked<String>();
 			if(this.isAuthenticated()){
 				String requestID=msgtracker.create(mr);
 				mr.tag=requestID;
@@ -221,49 +229,66 @@ public class PacswitchMessager extends PacswitchClient {
 			else return res;
 		} 
 		finally{
-			if(mr!=null)this.msgtracker.remove(mr.getTag());
+			if(mr!=null)this.msgtracker.remove(mr.tag);
 		}
 	}
 	
-	public static final String T_PACSWITCH_SEND="Pacswitch send";
+	ExecutorService sendingPool = Executors.newSingleThreadExecutor(); 
 	
 	public void sendAsync(final String to, final String message){
-		Thread t_send=new Thread(T_PACSWITCH_SEND){
+		sendingPool.execute(new Runnable(){
 			@Override
 			public void run(){
-				FutureObject<String> mr=null;
+				Tracked<String> mr=null;
 				try{ 	
-					mr=new FutureObject<String>();
+					mr=new Tracked<String>();
 					if(PacswitchMessager.this.isAuthenticated()){
-						String requestID=msgtracker.create(mr);
+						final String requestID=msgtracker.create(mr);
 						mr.tag=requestID;
 						try{
-							if(!MessageProtocol.send(PacswitchMessager.this,MessageProtocol.Type.Request,to,message.getBytes(MessageProtocol.ENC),requestID.getBytes(ASCII)))
-								PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoRouteToServer);							
+							if(!MessageProtocol.send(PacswitchMessager.this,MessageProtocol.Type.Request,to,message.getBytes(MessageProtocol.ENC),requestID.getBytes(ASCII))){
+								PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoRouteToServer);
+								return;
+							}							
 						}
 						catch(UnsupportedEncodingException e){ 
-							IEventListener.Args args=new IEventListener.Args();
+							Dynamic args=new Dynamic();
 							args.put(IEventListener.K_EXCEPTION, e);
-							PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.AsyncException, args);	
+							PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.AsyncException, args);
+							return;
 						}
 					}
-					else PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.InvalidOperation); // Not authenticated
+					else {
+						PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.InvalidOperation);
+						return;
+					}
 					
 					String res=mr.get(8500);
 					if(res==null){
-						IEventListener.Args args=new IEventListener.Args();
+						Dynamic args=new Dynamic();
 						args.put(IEventListener.K_TO, to);
 						args.put(IEventListener.K_MSG, message);
 						PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.NoResponse, args);
+						return;
+					}
+					else{
+						Dynamic args=new Dynamic();
+						args.put(IEventListener.K_TO, to);
+						args.put(IEventListener.K_MSG, message);
+						PacswitchMessager.this.listeners.fireEvent(IEventListener.Type.MessageSent, args);
 					}
 				} 
 				finally{
-					if(mr!=null)PacswitchMessager.this.msgtracker.remove(mr.getTag());
+					if(mr!=null)PacswitchMessager.this.msgtracker.remove(mr.tag);
 				}
 			}
-		};
-		t_send.setDaemon(true);
-		t_send.start();
+		});
+	}
+	
+	@Override
+	public void close(){
+		sendingPool.shutdown();
+		super.close();
 	}
 	
 	/**
@@ -287,20 +312,22 @@ public class PacswitchMessager extends PacswitchClient {
 		catch (UnsupportedEncodingException e1) { }
 	}
 	
+	@Deprecated
 	public boolean lookup(String username) {
-		FutureObject<String> mr=new FutureObject<String>();
+		// TODO implement lookupAsync using callback
+		Tracked<String> mr=new Tracked<String>();
 		if(this.isAuthenticated()){
 			String requestID=PacswitchProtocol.M_LOOKUP;
 			mr.tag=requestID;
 			msgtracker.put(requestID, mr);
 			try{
 				PacswitchProtocol.LOOKUP(this, username);
-				mr.until(5000);
-				if(mr.isAvailable())return mr.get().equals(OK);
+				String res=mr.get(5000);
+				if(res!=null)return res.equals(OK);
 				else return false;
 			}
 			catch(IOException e){ return false; }
-			finally{ if(mr!=null)this.msgtracker.remove(mr.getTag()); }
+			finally{ if(mr!=null)this.msgtracker.remove(mr.tag); }
 		}
 		else return false;
 	}
@@ -317,7 +344,7 @@ public class PacswitchMessager extends PacswitchClient {
 		catch (UnsupportedEncodingException e1) { return false; }
 	}
 	
-	protected EventListenerList listeners=new EventListenerList();
+	protected EventListeners listeners=new EventListeners();
 	public void addEventListener(IEventListener listener){
 		this.listeners.add(listener);
 	}
@@ -337,7 +364,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @return Response to the message
 	 */
 	protected String handleMessage(String from, String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_FROM, from);
 		args.put(IEventListener.K_MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageReceived, args);
@@ -353,7 +380,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @param message
 	 */
 	protected void handleSignal(String from,String id, String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_FROM, from);
 		args.put(IEventListener.K_ID, id);
 		args.put(IEventListener.K_MSG, message);
@@ -366,7 +393,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @param message
 	 */
 	protected void handleSignal(String from, String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_FROM, from);
 		args.put(IEventListener.K_MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.SignalReceived, args);
@@ -377,7 +404,7 @@ public class PacswitchMessager extends PacswitchClient {
 	 * @return A standard ID
 	 */
 	public static final String generateID(){
-		return FutureTracker.generateID(MessageProtocol.RIDLEN, Tracker.RIDRANGE);
+		return Tracker.generateID(MessageProtocol.RIDLEN, MessageTracker.RIDRANGE);
 	}
 	
 	/**

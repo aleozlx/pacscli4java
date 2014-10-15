@@ -10,7 +10,9 @@ import java.util.Date;
 
 
 
+
 import alx.pacswitch.GatewayMessager;
+import alx.pacswitch.types.Dynamic;
 import alx.pacswitch.types.IEventListener;
 
 public class Messager extends GatewayMessager{
@@ -23,7 +25,7 @@ public class Messager extends GatewayMessager{
 			public Type getType() { return Type.MessageAllowed; }
 
 			@Override
-			public void run(Args args) {
+			public void run(Dynamic args) {
 				String from=(String)args.get(K_FROM);
 				String message=(String)args.get(K_MSG);
 				String output=format(from,message,true);
@@ -36,7 +38,7 @@ public class Messager extends GatewayMessager{
 			public Type getType() { return Type.MessageSending; }
 
 			@Override
-			public void run(Args args) {
+			public void run(Dynamic args) {
 				String to=(String)args.get(K_TO);
 				String message=(String)args.get(K_MSG);
 				String output=format(to,message,false);

@@ -1,7 +1,7 @@
 package alx.pacswitch;
 
 import java.util.*;
-
+import java.util.concurrent.*;
 import alx.pacswitch.types.*;
 
 /**
@@ -82,16 +82,7 @@ public class GatewayMessager extends PacswitchMessager {
 	 * counts of pending messages
 	 */
 	public void notifyPendingCounts(){
-		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged);
-//		new Thread("GM Notifier"){
-//			@Override
-//			public void run(){
-//				Map<String,Integer> ct=inbox.count();
-//				if(handlers!=null)for(IMessageHandler i:handlers) 
-//					i.refreshPendingCounts(ct);
-//			}
-//		}.start();
-		
+		this.listeners.fireEvent(IEventListener.Type.PendingCountChanged);	
 	}
 	
 	/**
@@ -109,6 +100,8 @@ public class GatewayMessager extends PacswitchMessager {
 	 */
 	SignalHandlerMap sighandlers=new SignalHandlerMap();
 	
+	ThreadPoolExecutor sigDispatcherPool = new ThreadPoolExecutor(1,8,200,TimeUnit.MILLISECONDS,new ArrayBlockingQueue<Runnable>(20));
+	
 	/**
 	 * Dispatch untracked messages
 	 * @param from Sender ID
@@ -117,10 +110,10 @@ public class GatewayMessager extends PacswitchMessager {
 	 */
 	protected void dispatchUntracked(final String from,final String id,final String message){
 		sighandlers.hint(from,id,message);
-		new Thread("GM SigDispatcher"){
+		sigDispatcherPool.execute(new Runnable(){
 			@Override
-			public void run(){
-				sighandlers.handleMessage(from, id, message);}}.start();
+			public void run(){ sighandlers.handleMessage(from, id, message); }
+		});
 	}
 	
 	class SignalHandlerMap extends HashMap<String,LinkedList<ISignalHandler>> {
@@ -155,6 +148,12 @@ public class GatewayMessager extends PacswitchMessager {
 		this.sighandlers.remove(id, h);
 	}
 	
+	/**
+	 * Asynchronously send a message.
+	 * @param to Receiver ID
+	 * @param message
+	 * @return ACK or NAK
+	 */
 	@Deprecated
 	@Override
 	public String send(String to, String message) throws PacswitchException{
@@ -165,12 +164,30 @@ public class GatewayMessager extends PacswitchMessager {
 	}
 	
 	/**
+	 * Asynchronously send a message.
+	 * IEventListener.Type.MessageSent shall be fired directly from {@link PacswitchMessager#sendAsync} if it comes up.
+	 * @param to Receiver ID
+	 * @param message
+	 */
+	@Override
+	public void sendAsync(final String to, final String message){
+		onMessageSending(to,message);
+		super.sendAsync(to, message);
+	}
+	
+	@Override
+	public void close(){
+		sigDispatcherPool.shutdown();
+		super.close();
+	}
+	
+	/**
 	 * Message outgoing event
-	 * @param to Sender ID
+	 * @param to Receiver ID
 	 * @param message
 	 */
 	protected void onMessageSending(String to,String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_TO, to);
 		args.put(IEventListener.K_MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageSending, args);
@@ -178,11 +195,11 @@ public class GatewayMessager extends PacswitchMessager {
 	
 	/**
 	 * Message outgoing event (only successful ones)
-	 * @param to Sender ID
+	 * @param to Receiver ID
 	 * @param message
 	 */
 	protected void onMessageSent(String to,String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_TO, to);
 		args.put(IEventListener.K_MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageSent, args);
@@ -190,11 +207,11 @@ public class GatewayMessager extends PacswitchMessager {
 	
 	/**
 	 * Message blocked event
-	 * @param from Receiver ID
+	 * @param from Sender ID
 	 * @param message
 	 */
 	protected void onMessageBlocked(String from,String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_FROM, from);
 		args.put(IEventListener.K_MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageBlocked, args);
@@ -206,7 +223,7 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onMessageAllowed(String from,String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_FROM, from);
 		args.put(IEventListener.K_MSG, message);
 		this.listeners.fireEvent(IEventListener.Type.MessageAllowed, args);
@@ -223,7 +240,7 @@ public class GatewayMessager extends PacswitchMessager {
 	 * @param message
 	 */
 	protected void onSignalHandlerMissing(String from,String id,String message){
-		IEventListener.Args args=new IEventListener.Args();
+		Dynamic args=new Dynamic();
 		args.put(IEventListener.K_FROM, from);
 		args.put(IEventListener.K_ID, id);
 		args.put(IEventListener.K_MSG, message);

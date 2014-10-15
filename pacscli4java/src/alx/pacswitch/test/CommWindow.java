@@ -44,7 +44,7 @@ public class CommWindow extends ModernFrame {
 				}
 				
 				@Override
-				public void run(Args args) {
+				public void run(Dynamic args) {
 					String ack=CommWindow.this.handleMessage((String)args.get(K_FROM),(String)args.get(K_MSG));
 					if(ack!=null)args.ret(ack);
 				}
@@ -56,7 +56,7 @@ public class CommWindow extends ModernFrame {
 				}
 				
 				@Override
-				public void run(Args args) {
+				public void run(Dynamic args) {
 					CommWindow.this.refreshPendingCounts(pm.inbox.count());
 				}
 			}
@@ -157,9 +157,13 @@ public class CommWindow extends ModernFrame {
 
 	private void loadPendingMessages(String name) {
 		if(pm.inbox.count(name)>0){
-			LinkedList<PendingMessage> msgs=pm.inbox.get(name);
-			for(PendingMessage msg:msgs)
-				print(msg.getFrom(),msg.getMessage(),msg.getTime());
+			LinkedList<Dynamic> msgs=pm.inbox.get(name);
+			for(Dynamic msg:msgs){
+				print(
+					(String)msg.get(MessageInbox.K_FROM),
+					(String)msg.get(MessageInbox.K_MSG),
+					(Date)msg.get(MessageInbox.K_RECVTIME));
+			}
 			msgs.clear();
 			pm.notifyPendingCounts();
 		}
@@ -202,20 +206,16 @@ public class CommWindow extends ModernFrame {
 		txtInput.setText("");
 		if(msg.trim().equals(""))return;
 		if(!target.equals("")){
-			new Thread("SendAsync"){
-				@Override
-				public void run(){
-					try {
-						print(pm.getUserID(),msg);
-						if(!pm.send(target, msg).equals("ACK"))
-							print("system","No response");
-					} 
-					catch (PacswitchException e) { 
-						e.printStackTrace();
-						print("system",target+" offline."); 
-					}
-				}
-			}.start();
+			try {
+				print(pm.getUserID(),msg);
+				if(!pm.send(target, msg).equals("ACK"))
+					print("system","No response");
+			} 
+			catch (PacswitchException e) { 
+				e.printStackTrace();
+				print("system",target+" offline."); 
+			}
+
 		}
 	}
 	private void sendTextView(){

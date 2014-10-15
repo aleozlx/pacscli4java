@@ -4,7 +4,7 @@ package alx.pacswitch.types;
  * Data buffer for PacswitchClient
  * @author Alex
  */
-public class Pacbuffer{
+public class ProtocolBuffer{
 	/**
 	 * Buffer size
 	 */
